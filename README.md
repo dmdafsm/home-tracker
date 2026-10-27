@@ -81,9 +81,12 @@ Dacă `cloudflared` rulează la rândul lui într-un container Docker, foloseșt
 
 ## Interfața web
 
-- **Apartamente** (feed-ul): apartamentele care trec de profilul ales, ordonate după scor, cu
-  poza, prețul, etajul, anul blocului, scorul de autenticitate și etichetele. Filtre pentru
-  salvate, ascunse și dispărute. Un banner apare când colectarea are probleme.
+- **Apartamente** (feed-ul): apartamentele care trec de profilul ales, cu un carusel de poze,
+  prețul, prețul pe mp, etajul, anul blocului, scorul de autenticitate și etichetele. Filtre
+  (text, preț, suprafață, camere, platforme, proprietar sau agenție, salvate, ascunse,
+  dispărute) și sortări (potrivire, cele mai noi, preț, preț pe mp, suprafață, autenticitate).
+  De pe card: detalii, anunțul cel mai ieftin, salvează, ascunde. Un banner apare când
+  colectarea are probleme. Interfața e în stil Material 3, fără JavaScript.
 - **Pagina unui apartament**: anunțurile lui de pe toate platformele, publicatorii, semnalele
   care le-au legat, anul construcției cu dovezile, istoricul prețului, pozele și descrierea.
   Poți să-l **salvezi**, să-l **ascunzi**, să-l marchezi **confirmat real** sau **fals** după ce ai

@@ -17,7 +17,7 @@ Do not circumvent technical measures a site uses to control access: CAPTCHAs and
 
 - The extracted phone number is hashed (`parsing.phone_hash`) before it is stored in `listing.phone_hash`. The hash uses a fixed salt that is public in this repository, so it is pseudonymization for matching, not anonymization: Romanian mobile numbers can be enumerated. The listing description and the raw pages in `data/raw/` can still contain the number in plain text; both stay local.
 - Publisher names and listing text stay in the local database and `data/raw/`. Logs carry titles and URLs, not descriptions or phone numbers.
-- Nothing is sent out about listings: there are no notifications, and the web interface is reachable from outside only behind Cloudflare Access.
+- Nothing is sent out about listings: there are no notifications, and the web interface is reachable from outside only behind Cloudflare Access. The interface loads Roboto and Material Symbols from Google Fonts, so the viewer's browser contacts Google (IP address and user agent, no referrer: the pages use `referrer: same-origin`); no listing data goes with it.
 - OpenStreetMap's Overpass API receives the coordinates of tracked apartments, rounded to about 10 m, at most `OSM_LOOKUPS_PER_RUN` per run and once per location ([ADR 0005](decisions/0005-openstreetmap-buildings.md)). They come from public listings and are sent without any listing, publisher or contact data. Requests carry the project's own User-Agent, as OpenStreetMap's usage policy asks; set `OSM_LOOKUPS_PER_RUN=0` to turn this off.
 - Photos are stored locally only to compare them; they are never served publicly or republished.
 

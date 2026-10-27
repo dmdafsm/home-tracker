@@ -135,7 +135,7 @@ def web(three_agencies, tmp_path):
 def test_merge_pages(web):
     sessions, client = web
     ids = properties(sessions)
-    assert "posibil același cu 2 apartamente" in client.get("/").text
+    assert "posibil același cu 2" in client.get("/").text
     page = client.get(f"/property/{ids['a']}").text
     assert "Posibil același apartament" in page and f'action="/property/{ids["a"]}/merge/{ids["b"]}"' in page
     url = f"/property/{ids['b']}/merge/{ids['a']}"

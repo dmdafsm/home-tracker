@@ -5,58 +5,189 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <!-- same-origin, nu no-referrer: cu no-referrer browserul trimite „Origin: null” la POST și verificarea
-       CSRF din web.py refuză butoanele. Spre alte site-uri tot nu pleacă nimic. -->
+       CSRF din web.py refuză butoanele. Spre alte site-uri (inclusiv Google Fonts) nu pleacă nimic. -->
   <meta name="referrer" content="same-origin">
+  <meta name="color-scheme" content="light dark">
   <title>{% block title %}home-tracker{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&amp;display=swap">
+  <!-- Doar simbolurile folosite (icon_names, în ordine alfabetică), cu axa FILL pentru stările „activ”. -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0..1,0&amp;icon_names=apartment,bookmark,call_split,check,chevron_left,chevron_right,close,content_copy,edit,filter_list,groups,home_work,image_not_supported,merge,monitor_heart,open_in_new,search,sort,tune,verified,visibility,visibility_off,warning&amp;display=block">
   <style>
+    /* Material 3: rolurile de culoare dintr-o paletă albastră (sursă #36618e), deschis și închis. */
     :root {
-      --bg: #f7f6f3; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e4e2dc;
-      --accent: #2f5d8a; --good: #2e7d4f; --warn: #a15c00; --bad: #a33a3a;
-      --s0: #2f5d8a; --s1: #b5603a; --s2: #3f8a5b; --s3: #7a4f9a;
+      --primary: #36618e; --on-primary: #ffffff; --primary-container: #d1e4ff; --on-primary-container: #001d36;
+      --secondary-container: #d7e3f7; --on-secondary-container: #101c2b;
+      --tertiary-container: #f2daff; --on-tertiary-container: #251431;
+      --error: #ba1a1a; --error-container: #ffdad6; --on-error-container: #410002;
+      --success: #2c6a46; --success-container: #b0f1c3; --on-success-container: #002111;
+      --warning: #7c5800; --warning-container: #ffdea6; --on-warning-container: #271900;
+      --surface: #f8f9ff; --surface-dim: #d8dae0; --on-surface: #191c20; --on-surface-variant: #43474e;
+      --surface-container-lowest: #ffffff; --surface-container-low: #f2f3fa; --surface-container: #eceef4;
+      --surface-container-high: #e6e8ee; --surface-container-highest: #e1e2e8;
+      --outline: #73777f; --outline-variant: #c3c7cf; --scrim: rgb(0 0 0 / 0.32);
+      --s0: #36618e; --s1: #8f4c38; --s2: #2c6a46; --s3: #6b5778;
+      --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px 1px rgb(0 0 0 / 0.15);
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #151517; --card: #1f1f22; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33;
-        --accent: #7fb0e0; --good: #6cc492; --warn: #e0a85a; --bad: #e08080;
-        --s0: #7fb0e0; --s1: #e09a78; --s2: #7fcf9c; --s3: #b996d6;
+        --primary: #a0cafd; --on-primary: #003258; --primary-container: #194975; --on-primary-container: #d1e4ff;
+        --secondary-container: #3b4858; --on-secondary-container: #d7e3f7;
+        --tertiary-container: #523f5f; --on-tertiary-container: #f2daff;
+        --error: #ffb4ab; --error-container: #93000a; --on-error-container: #ffdad6;
+        --success: #95d5a8; --success-container: #0f5130; --on-success-container: #b0f1c3;
+        --warning: #f6be48; --warning-container: #5e4200; --on-warning-container: #ffdea6;
+        --surface: #111418; --surface-dim: #111418; --on-surface: #e1e2e8; --on-surface-variant: #c3c7cf;
+        --surface-container-lowest: #0c0e13; --surface-container-low: #191c20; --surface-container: #1d2024;
+        --surface-container-high: #282a2f; --surface-container-highest: #33353a;
+        --outline: #8d9199; --outline-variant: #43474e;
+        --s0: #a0cafd; --s1: #ffb59f; --s2: #95d5a8; --s3: #d6bee4;
       }
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text);
-           font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    a { color: var(--accent); text-decoration: none; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--surface); color: var(--on-surface);
+           font: 400 14px/20px Roboto, system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: 0.25px; }
+    a { color: var(--primary); text-decoration: none; }
     a:hover { text-decoration: underline; }
-    header.top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline;
-                 padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
-    header.top h1 { font-size: 17px; margin: 0; }
-    main { max-width: 960px; margin: 0 auto; padding: 16px; }
-    .muted { color: var(--muted); }
-    .small { font-size: 13px; }
-    .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 12px;
-           border: 1px solid var(--line); color: var(--muted); margin-right: 4px; }
-    .tag.good { color: var(--good); border-color: currentColor; }
-    .tag.warn { color: var(--warn); border-color: currentColor; }
-    .tag.bad { color: var(--bad); border-color: currentColor; }
-    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
-            display: flex; flex-direction: column; color: inherit; }
-    .card:hover { text-decoration: none; border-color: var(--accent); }
-    .card img, .card .noimg { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--line); display: block; }
-    .card .noimg { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
-    .card .body { padding: 10px 12px 12px; display: grid; gap: 4px; }
-    .price { font-size: 18px; font-weight: 600; }
-    .score { float: right; font-weight: 600; }
-    section { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
-              padding: 14px 16px; margin-bottom: 14px; }
-    section h2 { font-size: 15px; margin: 0 0 10px; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; }
-    th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
-    th { color: var(--muted); font-weight: 500; border-top: 0; }
+    h1, h2, h3 { margin: 0; font-weight: 400; }
+    code { font-size: 13px; }
+
+    .icon { font-family: "Material Symbols Outlined"; font-weight: normal; font-style: normal; font-size: 20px;
+            line-height: 1; display: inline-block; vertical-align: -4px; white-space: nowrap; direction: ltr;
+            -webkit-font-smoothing: antialiased; font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+            user-select: none; }
+    .icon.fill { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
+
+    /* Tipografie M3 */
+    .headline { font-size: 24px; line-height: 32px; }
+    .title-large { font-size: 22px; line-height: 28px; }
+    .title { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: 0.15px; }
+    .label { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; }
+    .small { font-size: 12px; line-height: 16px; letter-spacing: 0.4px; }
+    .muted { color: var(--on-surface-variant); }
+    .nowrap { white-space: nowrap; }
+    .error { color: var(--error); white-space: pre-wrap; }
+    .notice { color: var(--success); }
+
+    /* Top app bar cu navigarea principală */
+    header.top { position: sticky; top: 0; z-index: 10; background: var(--surface-container);
+                 display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; padding: 8px 16px; }
+    header.top .brand { display: flex; align-items: center; gap: 8px; color: var(--on-surface);
+                        font-size: 22px; line-height: 28px; margin-right: auto; }
+    header.top .brand:hover { text-decoration: none; }
+    header.top .brand .icon { color: var(--primary); font-size: 24px; }
+    nav.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+    nav.tabs a { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px;
+                 border-radius: 20px; color: var(--on-surface-variant); font-weight: 500; white-space: nowrap; }
+    nav.tabs a:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); text-decoration: none; }
+    nav.tabs a[aria-current="page"] { background: var(--secondary-container); color: var(--on-secondary-container); }
+    .subtitle { width: 100%; color: var(--on-surface-variant); }
+    @media (max-width: 640px) { nav.tabs a { padding: 0 12px; } nav.tabs a .text { display: none; } }
+
+    main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+    /* Butoane M3: filled, tonal, outlined, text, icon */
+    button, .btn { font: 500 14px/20px Roboto, system-ui, sans-serif; letter-spacing: 0.1px; cursor: pointer;
+                   display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 40px;
+                   padding: 0 16px; border-radius: 20px; border: 1px solid var(--outline); background: transparent;
+                   color: var(--primary); text-decoration: none; white-space: nowrap; }
+    button:hover, .btn:hover { background: color-mix(in srgb, var(--primary) 8%, transparent); text-decoration: none; }
+    button:focus-visible, .btn:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+    textarea:focus-visible, label.chip:has(input:focus-visible) { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .btn.filled, button.filled { background: var(--primary); color: var(--on-primary); border-color: transparent; }
+    .btn.filled:hover, button.filled:hover { box-shadow: var(--shadow-1); background: color-mix(in srgb, var(--on-primary) 8%, var(--primary)); }
+    .btn.tonal, button.tonal { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+    .btn.tonal:hover, button.tonal:hover { background: color-mix(in srgb, var(--on-secondary-container) 8%, var(--secondary-container)); }
+    .btn.text, button.text { border-color: transparent; padding: 0 12px; }
+    button.on { background: var(--secondary-container); color: var(--on-secondary-container); border-color: transparent; }
+    .icon-btn { width: 40px; padding: 0; border: 0; color: var(--on-surface-variant); }
+    .icon-btn.on { color: var(--primary); background: transparent; }
+    .icon-btn.on .icon { font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24; }
+    .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+    form.inline { display: inline; margin: 0; }
+
+    /* Chips: tag-urile de stare (assist) și filtrele (filter chips cu checkbox ascuns) */
+    .tag { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border-radius: 8px;
+           font-size: 12px; font-weight: 500; letter-spacing: 0.4px; border: 1px solid var(--outline-variant);
+           color: var(--on-surface-variant); background: transparent; vertical-align: middle; white-space: nowrap; }
+    .tag .icon { font-size: 16px; vertical-align: 0; }
+    .tag.good { background: var(--success-container); color: var(--on-success-container); border-color: transparent; }
+    .tag.warn { background: var(--warning-container); color: var(--on-warning-container); border-color: transparent; }
+    .tag.bad { background: var(--error-container); color: var(--on-error-container); border-color: transparent; }
+    .tag.info { background: var(--tertiary-container); color: var(--on-tertiary-container); border-color: transparent; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    label.chip, a.chip { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 16px;
+                         border-radius: 8px; border: 1px solid var(--outline); color: var(--on-surface-variant);
+                         font-weight: 500; cursor: pointer; user-select: none; white-space: nowrap; }
+    label.chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+    label.chip:hover, a.chip:hover { background: color-mix(in srgb, var(--on-surface) 8%, transparent); text-decoration: none; }
+    label.chip:has(input:checked), a.chip[aria-current="true"] { background: var(--secondary-container);
+                         color: var(--on-secondary-container); border-color: transparent; padding-left: 8px; }
+    label.chip:has(input:checked)::before, a.chip[aria-current="true"]::before { content: "check"; font-family: "Material Symbols Outlined";
+                         font-size: 18px; line-height: 1; }
+
+    /* Câmpuri M3 (outlined), cu eticheta deasupra */
+    .field { display: grid; gap: 4px; min-width: 0; }
+    .field > span { font-size: 12px; font-weight: 500; color: var(--on-surface-variant); }
+    input[type=text], input[type=search], input[type=number], select {
+      font: 400 16px/24px Roboto, system-ui, sans-serif; height: 48px; padding: 0 12px; width: 100%;
+      border-radius: 4px; border: 1px solid var(--outline); background: transparent; color: var(--on-surface); }
+    input:hover, select:hover { border-color: var(--on-surface); }
+    input:focus, select:focus { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); outline: none; }
+    select option { background: var(--surface-container-high); color: var(--on-surface); }
+    textarea.yaml { width: 100%; min-height: 60vh; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+                    padding: 12px; border: 1px solid var(--outline); border-radius: 4px; background: var(--surface-container-lowest);
+                    color: var(--on-surface); }
+
+    /* Suprafețe: secțiuni ca filled cards, carduri ca elevated cards */
+    section { background: var(--surface-container-low); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    section h2 { font-size: 16px; line-height: 24px; font-weight: 500; margin: 0 0 12px; }
+    .banner { display: flex; gap: 12px; align-items: flex-start; background: var(--warning-container);
+              color: var(--on-warning-container); border-radius: 12px; padding: 12px 16px; margin: 0 0 16px; }
+    .banner a { color: inherit; text-decoration: underline; font-weight: 500; }
+    .empty { padding: 48px 16px; text-align: center; color: var(--on-surface-variant); }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-top: 1px solid var(--outline-variant); vertical-align: top; }
+    th { color: var(--on-surface-variant); font-size: 12px; font-weight: 500; letter-spacing: 0.5px; border-top: 0; }
     .scroll { overflow-x: auto; }
-    .gallery { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-    .gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; display: block; }
+    ul.signals { margin: 8px 0 0; padding-left: 20px; }
+    ul.signals li { margin: 4px 0; }
+    .price { font-size: 22px; line-height: 28px; font-weight: 500; }
+    .trust { font-weight: 500; }
+    .trust.high { color: var(--success); } .trust.mid { color: var(--warning); } .trust.low { color: var(--error); }
+
+    /* Carusel fără JavaScript: scroll-snap; butoane și puncte native unde browserul are ::scroll-button */
+    .carousel { position: relative; display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+                overscroll-behavior-x: contain; scrollbar-width: none; background: var(--surface-container-highest);
+                aspect-ratio: 4 / 3; anchor-name: --carousel; scroll-marker-group: after; }
+    .carousel::-webkit-scrollbar { display: none; }
+    .carousel > .slide { flex: 0 0 100%; scroll-snap-align: center; position: relative; }
+    .carousel > .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .carousel .count { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 8px;
+                       background: rgb(0 0 0 / 0.55); color: #fff; font-size: 12px; font-weight: 500; }
+    .carousel .none { width: 100%; display: grid; place-items: center; gap: 4px; color: var(--on-surface-variant); align-content: center; }
+    .carousel::scroll-button(*) { font-family: "Material Symbols Outlined"; font-size: 24px; border: 0; width: 40px; height: 40px;
+                                  border-radius: 20px; background: rgb(255 255 255 / 0.85); color: #191c20; cursor: pointer;
+                                  position: absolute; position-anchor: --carousel; top: anchor(center); translate: 0 -50%; }
+    .carousel::scroll-button(*):disabled { opacity: 0; }
+    .carousel::scroll-button(left) { content: "chevron_left"; left: calc(anchor(left) + 8px); }
+    .carousel::scroll-button(right) { content: "chevron_right"; right: calc(anchor(right) + 8px); }
+    .carousel > .slide::scroll-marker { content: ""; width: 6px; height: 6px; border-radius: 3px; background: rgb(255 255 255 / 0.6); }
+    .carousel > .slide::scroll-marker:target-current { background: #fff; width: 16px; }
+    .carousel::scroll-marker-group { position: absolute; position-anchor: --carousel; bottom: calc(anchor(bottom) + 10px);
+                                     left: anchor(center); translate: -50% 0; display: flex; gap: 4px; }
+    @supports selector(::scroll-marker) { .carousel .count { display: none; } }
+    .carousel > .slide { height: 100%; }
+    .carousel.large { aspect-ratio: auto; height: min(60vh, 75vw, 540px); border-radius: 12px; margin-bottom: 16px; background: #000; }
+    .carousel.large > .slide img { object-fit: contain; }
+
+    /* Graficul prețului */
     .chart { width: 100%; height: auto; }
-    .chart .axis { fill: var(--muted); font-size: 11px; }
+    .chart .axis { fill: var(--on-surface-variant); font-size: 11px; }
     .chart .s0 { stroke: var(--s0); fill: var(--s0); } .chart .s1 { stroke: var(--s1); fill: var(--s1); }
     .chart .s2 { stroke: var(--s2); fill: var(--s2); } .chart .s3 { stroke: var(--s3); fill: var(--s3); }
     .chart polyline { fill: none; }
@@ -64,30 +195,19 @@
     .key::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px;
                    margin-right: 5px; vertical-align: -1px; background: currentColor; }
     .key.s0 { color: var(--s0); } .key.s1 { color: var(--s1); } .key.s2 { color: var(--s2); } .key.s3 { color: var(--s3); }
-    .nowrap { white-space: nowrap; }
-    form.inline { display: inline; margin: 0; }
-    button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
-             border: 1px solid var(--line); background: var(--bg); color: var(--text); }
-    button:hover { border-color: var(--accent); }
-    button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
-    .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .trust { font-weight: 600; }
-    .trust.high { color: var(--good); } .trust.mid { color: var(--warn); } .trust.low { color: var(--bad); }
-    ul.signals { margin: 6px 0 0; padding-left: 18px; }
-    ul.signals li { margin: 3px 0; }
-    .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 14px; align-items: center; }
-    textarea.yaml { width: 100%; min-height: 60vh; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
-                    padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); }
-    .error { color: var(--bad); white-space: pre-wrap; }
-    .notice { color: var(--good); }
-    .banner { background: var(--card); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; }
-    .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+    {% block style %}{% endblock %}
   </style>
 </head>
 <body>
+  {% set path = request.url.path %}
   <header class="top">
-    <h1><a href="/">home-tracker</a></h1>
-    <nav class="small"><a href="/">Apartamente</a> · <a href="/publishers">Publicatori</a> · <a href="/profiles">Profiluri</a> · <a href="/status">Stare</a></nav>
+    <a class="brand" href="/"><span class="icon" aria-hidden="true">home_work</span>home-tracker</a>
+    <nav class="tabs" aria-label="Pagini">
+      <a href="/" {% if path == "/" or path.startswith("/property") %}aria-current="page"{% endif %}><span class="icon" aria-hidden="true">apartment</span><span class="text">Apartamente</span></a>
+      <a href="/publishers" {% if path.startswith("/publisher") %}aria-current="page"{% endif %}><span class="icon" aria-hidden="true">groups</span><span class="text">Publicatori</span></a>
+      <a href="/profiles" {% if path.startswith("/profiles") %}aria-current="page"{% endif %}><span class="icon" aria-hidden="true">tune</span><span class="text">Profiluri</span></a>
+      <a href="/status" {% if path == "/status" %}aria-current="page"{% endif %}><span class="icon" aria-hidden="true">monitor_heart</span><span class="text">Stare</span></a>
+    </nav>
     {% block header %}{% endblock %}
   </header>
   <main>{% block content %}{% endblock %}</main>
