@@ -42,6 +42,7 @@
       <div>
         {% if not h.active %}<span class="tag bad">dispărut</span>{% endif %}
         {% if h.republications %}<span class="tag warn">{{ plural(h.republications|length, "republicare", "republicări") }}</span>{% endif %}
+        {% if item.duplicates %}<span class="tag warn" title="{% for d in item.duplicates %}apartamentul {{ d.property_id }}: {{ d.reasons|join(', ') }}{% if not loop.last %}; {% endif %}{% endfor %}">{{ "posibil același cu " ~ (item.duplicates|length) ~ " " ~ ("apartament" if item.duplicates|length == 1 else "apartamente") }}</span>{% endif %}
         {% if item.label and item.label.saved %}<span class="tag good">salvat</span>{% endif %}
         {% if item.label and item.label.hidden %}<span class="tag">ascuns</span>{% endif %}
         {% if item.label and item.label.verdict == "real" %}<span class="tag good">confirmat real</span>{% endif %}

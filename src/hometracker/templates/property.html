@@ -54,6 +54,30 @@
   <p class="small muted">Pentru apartamentul ales, anul se confirmă din certificatul energetic, cartea tehnică sau extrasul CF (ANCPI); vezi docs/surse-an-constructie.md.</p>
 </section>
 
+{% if duplicates %}
+<section>
+  <h2>Posibil același apartament</h2>
+  <p class="small muted">
+    Apartamente pe care gruparea automată nu le-a unit (fără poze comune, de obicei agenții care au
+    fotografiat fiecare apartamentul), dar care se potrivesc: același etaj și număr de camere, suprafață
+    la cel mult 5 mp, preț la cel mult 2%, aproape pe hartă. Unirea mută anunțurile și alertele trimise
+    în apartamentul mai vechi.
+  </p>
+  <ul class="signals">
+  {% for d in duplicates %}
+    <li>
+      <a href="/property/{{ d.property_id }}">Apartamentul {{ d.property_id }}</a>:
+      {{ platform(d.listing.platform) }}, {{ publisher(d.listing) }} · <span class="muted">{{ d.reasons|join(" · ") }}</span>
+      <div class="actions">
+        <form class="inline" method="post" action="/property/{{ history.property_id }}/merge/{{ d.property_id }}"><button>e același apartament</button></form>
+        <form class="inline" method="post" action="/property/{{ history.property_id }}/distinct/{{ d.property_id }}"><button>nu e același</button></form>
+      </div>
+    </li>
+  {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
 {% if chart %}
 <section>
   <h2>Istoricul prețului</h2>

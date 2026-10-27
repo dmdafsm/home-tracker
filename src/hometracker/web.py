@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -21,6 +21,7 @@ from .buildyear import YearEstimate, estimate_for
 from .config import Settings
 from .history import PropertyHistory, match_label, property_history, publisher_label
 from .labels import ACTIONS, apply_label, label_for, labels_for, split_listing
+from .merge import Suggestion, mark_distinct, merge_properties, possible_duplicates
 from .models import Alert, Listing, Photo, PropertyLabel, as_utc, init_db, make_engine, utcnow
 from .notify import PLATFORM_NAMES, floor_label, format_price
 from .photos import image_path
@@ -46,6 +47,7 @@ class FeedItem:
     assessment: Assessment
     label: PropertyLabel | None
     year: YearEstimate | None
+    duplicates: list[Suggestion] = field(default_factory=list)
 
     @property
     def platforms(self) -> list[str]:
@@ -63,6 +65,7 @@ def feed(
     context = Context.build(session)
     ids = property_ids.all()
     labels = labels_for(session, ids)
+    duplicates = possible_duplicates(session)
     items = []
     for property_id in ids:
         label = labels.get(property_id)
@@ -89,6 +92,7 @@ def feed(
                 assess(history, context),
                 label,
                 estimate_for(session, history.listings),
+                duplicates.get(property_id, []),
             )
         )
     items.sort(key=lambda item: (-item.result.score, -as_utc(item.history.listings[-1].first_seen).timestamp()))
@@ -233,6 +237,7 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                     "assessment": assess(history, Context.build(session)),
                     "label": label_for(session, property_id),
                     "year": estimate_for(session, history.listings),
+                    "duplicates": possible_duplicates(session, [property_id]).get(property_id, []),
                     "now": utcnow(),
                 },
             )
@@ -269,6 +274,32 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                 raise HTTPException(400, str(exc)) from None
             session.commit()
         return RedirectResponse(f"/property/{new_property}", status_code=303)
+
+    @app.post("/property/{property_id}/merge/{other_id}")
+    def merge(request: Request, property_id: int, other_id: int):
+        require_same_origin(request)
+        with sessions() as session:
+            try:
+                kept = merge_properties(session, property_id, other_id)
+            except LookupError:
+                raise HTTPException(404, "apartament inexistent") from None
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from None
+            session.commit()
+        return RedirectResponse(f"/property/{kept}", status_code=303)
+
+    @app.post("/property/{property_id}/distinct/{other_id}")
+    def distinct(request: Request, property_id: int, other_id: int):
+        require_same_origin(request)
+        with sessions() as session:
+            try:
+                mark_distinct(session, property_id, other_id)
+            except LookupError:
+                raise HTTPException(404, "apartament inexistent") from None
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from None
+            session.commit()
+        return RedirectResponse(f"/property/{property_id}", status_code=303)
 
     @app.get("/publishers", response_class=HTMLResponse)
     def publishers_page(request: Request):

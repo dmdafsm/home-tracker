@@ -197,6 +197,18 @@ class LabelEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class DistinctProperties(Base):
+    """Două apartamente despre care utilizatorul a spus că nu sunt același (nu mai sunt sugerate)."""
+
+    __tablename__ = "property_distinct"
+    __table_args__ = (UniqueConstraint("property_a", "property_b"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    property_a: Mapped[int] = mapped_column(Integer, index=True)  # property_a < property_b
+    property_b: Mapped[int] = mapped_column(Integer, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class OsmBuilding(Base):
     """Rezultatul unei interogări Overpass pentru o locație (inclusiv „nimic găsit”), ca să nu se repete."""
 
