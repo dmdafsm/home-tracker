@@ -58,8 +58,12 @@ Ai nevoie de Docker (de exemplu Docker Desktop).
 git clone https://github.com/dmdafsm/home-tracker.git
 cd home-tracker
 cp .env.example .env        # completează POSTGRES_PASSWORD
+cp profiles/example.yaml profiles/cautarea-mea.yaml   # schimbă name, criteriile și pune active: true
 docker compose up -d --build
 ```
+
+Profilurile tale (`profiles/*.yaml`) rămân locale: git le ignoră, în repo e doar `example.yaml`,
+inactiv. Un profil se poate face și din interfață (Profiluri → copiază).
 
 Interfața e pe http://localhost:8080 (portul din `WEB_LOCAL_PORT`, publicat doar pe
 `127.0.0.1`).

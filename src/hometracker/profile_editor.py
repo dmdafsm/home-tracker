@@ -57,7 +57,7 @@ def parse(text: str) -> Profile:
         lines = [f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors()]
         raise ProfileError("; ".join(lines)) from None
     if not NAME.fullmatch(profile.name):
-        raise ProfileError("name: doar litere mici, cifre și - (cel mult 40), de exemplu gheorgheni-mama")
+        raise ProfileError("name: doar litere mici, cifre și - (cel mult 40), de exemplu cluj-marasti")
     unknown = sorted(set(profile.sources) - set(ADAPTERS))
     if unknown:
         raise ProfileError(f"sources: platformă necunoscută {', '.join(unknown)} (cunoscute: {', '.join(ADAPTERS)})")

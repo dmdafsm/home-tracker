@@ -14,7 +14,7 @@ The repository contains code and documentation only. Collected listings, photos,
 
 - Make the repository private: real fixtures would be possible, but the code would not be shareable and a later visibility change would expose them.
 - Commit real pages: simplest tests, but republishes third-party listings and personal data.
-- Consequences: each adapter change needs a hand-made synthetic fixture and one local check on a real page. The search profile in `profiles/` is public; it holds criteria, not personal data.
+- Consequences: each adapter change needs a hand-made synthetic fixture and one local check on a real page. Only the example profile in `profiles/` is committed, inactive and with invented criteria; real search profiles stay local (ignored by git), because a budget and a target area are personal.
 
 ## Verification
 

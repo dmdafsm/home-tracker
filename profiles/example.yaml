@@ -1,18 +1,21 @@
-# Profil de căutare. Fiecare fișier .yaml din profiles/ e un profil separat.
-name: gheorgheni-mama
-description: Apartament pentru mama, Gheorgheni, parter sau etajul 1
-active: true
+# Profil de exemplu. Fiecare fișier .yaml din profiles/ e un profil separat; profilurile tale rămân
+# locale (git le ignoră), în repo e doar acesta. Pornește un profil nou copiind fișierul (sau din
+# interfață: Profiluri → copiază), schimbă `name` și pune `active: true`.
+name: example
+description: Exemplu — apartament în Mărăști, Cluj-Napoca, etajele 1–4
+# Inactiv: worker-ul nu colectează pentru el și nu apare în feed.
+active: false
 
 # Filtre dure: un anunț care nu le trece e ignorat.
 filters:
-  price_eur: { min: 130000, max: 165000 }
+  price_eur: { min: 100000, max: 140000 }
   # Valori posibile: basement, ground, raised_ground, 1, 2, ... , attic
-  floors: [ground, raised_ground, 1]
+  floors: [1, 2, 3, 4]
   # Un anunț fără etaj declarat nu e exclus, dar primește un scor mai mic.
   allow_unknown_floor: true
-  area_m2: { min: 35 }
+  area_m2: { min: 45 }
   # Textul anunțului (titlu, descriere, localizare) trebuie să conțină cel puțin una.
-  text_any: [gheorgheni]
+  text_any: [marasti]
   # Anunțuri respinse dacă textul conține oricare dintre acestea. Etajul e deja filtrat mai sus;
   # cuvinte ca „demisol” nu sunt puse aici, pentru că apar și în „boxă la demisol”.
   text_none: ["spatiu comercial", "regim hotelier"]
@@ -27,24 +30,23 @@ preferences:
 # URL-urile de mai jos sunt un punct de plecare și trebuie verificate.
 sources:
   storia:
-    url: "https://www.storia.ro/ro/rezultate/vanzare/apartament/cluj/cluj--napoca/gheorgheni?priceMin=130000&priceMax=165000&by=LATEST&direction=DESC"
+    url: "https://www.storia.ro/ro/rezultate/vanzare/apartament/cluj/cluj--napoca/marasti?priceMin=100000&priceMax=140000&by=LATEST&direction=DESC"
   olx:
     # Dezactivat: din octombrie 2026, OLX răspunde la colector cu HTTP 403 de la CloudFront („Request
     # blocked”), inclusiv pentru pagina de căutare. Nu ocolim blocarea (fără alt User-Agent, IP sau proxy);
     # reactivează sursa doar când există o cale permisă. Detalii: docs/architecture.md.
     enabled: false
-    url: "https://www.olx.ro/imobiliare/apartamente-garsoniere-de-vanzare/cluj-napoca/q-gheorgheni/?currency=EUR&search%5Border%5D=created_at:desc&search%5Bfilter_float_price:from%5D=130000&search%5Bfilter_float_price:to%5D=165000"
+    url: "https://www.olx.ro/imobiliare/apartamente-garsoniere-de-vanzare/cluj-napoca/q-marasti/?currency=EUR&search%5Border%5D=created_at:desc&search%5Bfilter_float_price:from%5D=100000&search%5Bfilter_float_price:to%5D=140000"
   imobiliare:
     # Dezactivat: din octombrie 2026, Imobiliare.ro răspunde colectorului cu HTTP 403 și cere o verificare
     # (protecție anti-bot). Nu o ocolim (fără alt User-Agent, IP, proxy sau browser simulat); reactivează
     # sursa doar când există o cale permisă. Detalii: docs/architecture.md.
     enabled: false
-    url: "https://www.imobiliare.ro/vanzare-apartamente/cluj-napoca/gheorgheni?pret=130000-165000"
-  # Publi24: căutarea cu zona Gheorgheni (verificată în octombrie 2026). Sortarea după cele mai noi nu
-  # e confirmată încă; pagina 1 are 20 de anunțuri.
+    url: "https://www.imobiliare.ro/vanzare-apartamente/cluj-napoca/marasti?pret=100000-140000"
+  # Publi24: căutarea cu zona din URL. Pagina 1 are 20 de anunțuri.
   publi24:
-    url: "https://www.publi24.ro/anunturi/imobiliare/de-vanzare/apartamente/cluj/cluj-napoca/?area=gheorgheni"
-  # Lajumate nu are filtru de cartier în URL: toată categoria din Cluj-Napoca, cele mai noi întâi
-  # (verificat), iar profilul păstrează doar anunțurile care pomenesc Gheorgheni.
+    url: "https://www.publi24.ro/anunturi/imobiliare/de-vanzare/apartamente/cluj/cluj-napoca/?area=marasti"
+  # Lajumate nu are filtru de cartier în URL: toată categoria din Cluj-Napoca, cele mai noi întâi,
+  # iar profilul păstrează doar anunțurile care pomenesc cartierul (text_any).
   lajumate:
     url: "https://lajumate.ro/anunturi/imobiliare/apartamente-de-vanzare/in/cluj/cluj-napoca"

@@ -1,7 +1,7 @@
 # Profilurile proprii rămân locale; în repo rămâne doar exemplul.
 profiles/*.yaml
 profiles/*.yml
-!profiles/gheorgheni-mama.yaml
+!profiles/example.yaml
 profiles/.history/
 profiles/.*.tmp
 
