@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import io
 import logging
+import re
 from pathlib import Path
 
 import imagehash
@@ -33,8 +35,28 @@ def is_informative(phash: str) -> bool:
     return 6 <= bits <= 58
 
 
+# Componente de cale acceptate ca atare: id-urile platformelor sunt cifre și litere.
+_SAFE_COMPONENT = re.compile(r"[A-Za-z0-9_-]{1,64}")
+
+
+def safe_component(value: str) -> str:
+    """Un nume de director sigur pentru o valoare venită din pagină (de exemplu id-ul extern).
+
+    Valorile obișnuite rămân neschimbate, deci căile existente nu se mută. Orice altceva (`..`, `/`,
+    caractere speciale, șir gol sau prea lung) devine un hash stabil, ca să nu poată ieși din director.
+    """
+    if _SAFE_COMPONENT.fullmatch(value):
+        return value
+    return "h-" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
 def save_image(directory: Path, platform: str, external_id: str, position: int, data: bytes) -> Path:
-    path = directory / platform / external_id / f"{position:02d}.jpg"
+    if not _SAFE_COMPONENT.fullmatch(platform):
+        raise ValueError(f"nume de platformă nevalid: {platform!r}")
+    path = directory / platform / safe_component(external_id) / f"{position:02d}.jpg"
+    # A doua barieră, dacă regula de mai sus ar fi slăbită vreodată.
+    if not path.resolve().is_relative_to(directory.resolve()):
+        raise ValueError(f"calea pozei iese din {directory}: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return path
