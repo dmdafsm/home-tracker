@@ -16,6 +16,6 @@ The workflow must run on pull requests and pushes. Avoid path filters on a requi
 
 Dependabot monitors GitHub Actions, the uv lockfile and the Dockerfile base images. Review updates and lockfile changes instead of auto-merging them. The `ntfy` image in `compose.yaml` uses the `latest` tag and is not covered; pin it when a reproducible stack matters.
 
-Outside GitHub, on the Mac: the Cloudflare tunnel ingress rules and the Cloudflare Access policy for the web hostname are configured by hand (see the [README](../../README.md)); this repository does not manage them.
+Outside GitHub, on the host machine: the tunnel ingress rules and the Cloudflare Access policy for the web hostname are configured by hand (see the [README](../../README.md)); this repository does not manage them.
 
 Local validation cannot prove GitHub-hosted execution or active branch protection; check an actual run after publishing.

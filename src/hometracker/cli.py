@@ -71,7 +71,7 @@ def cmd_loop(args: argparse.Namespace) -> None:
         wait = random.uniform(settings.interval_min_minutes, settings.interval_max_minutes) * 60
         target = time.time() + wait
         log.info("următoarea rulare la %s", datetime.fromtimestamp(target).strftime("%H:%M"))
-        # Pași scurți, după ceasul real: după un sleep al Mac-ului nu așteptăm restul intervalului.
+        # Pași scurți, după ceasul real: după un sleep al calculatorului nu așteptăm restul intervalului.
         while time.time() < target:
             time.sleep(min(30, max(1, target - time.time())))
 

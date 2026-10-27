@@ -1,10 +1,10 @@
 # Tracker imobiliar — plan
 
-Oct 27, 2026 · @Daniel
+Oct 27, 2026
 
 ## Scop și criterii
 
-Tool-ul adună anunțurile de apartamente de pe toate platformele românești într-un singur loc. Grupează anunțurile care descriu același apartament și dă fiecăruia un scor de încredere. Te anunță când apare ceva care se potrivește unui profil de căutare. Rulează local, pe MacBook, în Docker.
+Tool-ul adună anunțurile de apartamente de pe toate platformele românești într-un singur loc. Grupează anunțurile care descriu același apartament și dă fiecăruia un scor de încredere. Te anunță când apare ceva care se potrivește unui profil de căutare. Rulează local, pe un calculator personal, în Docker.
 
 Primul profil, pentru apartamentul mamei:
 
@@ -20,7 +20,7 @@ Profilurile sunt fișiere de configurare (YAML), nu cod. Fiecare are filtre dure
 
 ## Arhitectură
 
-Totul pornește cu un singur `docker compose up` pe MacBook. Sunt patru containere: `db` (PostgreSQL), `worker` (scheduler, colectoare, procesare), `web` (interfața) și `ntfy`. Limbajul e Python 3.12, cu httpx, Playwright, imagehash și FastAPI.
+Totul pornește cu un singur `docker compose up`. Sunt patru containere: `db` (PostgreSQL), `worker` (scheduler, colectoare, procesare), `web` (interfața) și `ntfy`. Limbajul e Python 3.12, cu httpx, Playwright, imagehash și FastAPI.
 
 ```
 platforme ──> worker (colectoare, parsare, potrivire, deduplicare) ──> db (PostgreSQL)
@@ -126,9 +126,9 @@ Notificările pornesc din motorul de potrivire și pleacă pe canalele alese în
 
 | Canal | Cum funcționează | Avantaj | Limită |
 | --- | --- | --- | --- |
-| **ntfy** (self-hosted) | container în același Docker; aplicația ntfy pe telefon se abonează la un topic | open-source, fără cont, push instant | telefonul ajunge la Mac prin Cloudflare Tunnel; pe iOS, push-ul instant cere ca serverul să trimită prin ntfy.sh (\`upstream-base-url\`) |
+| **ntfy** (self-hosted) | container în același Docker; aplicația ntfy pe telefon se abonează la un topic | open-source, fără cont, push instant | telefonul ajunge la server prin Cloudflare Tunnel; pe iOS, push-ul instant cere ca serverul să trimită prin ntfy.sh (\`upstream-base-url\`) |
 | **Email** (SMTP) | un cont Gmail sau Fastmail cu parolă de aplicație | universal, bun pentru rezumatul zilnic | nu e instant pe telefon |
-| **Notificare macOS** | un mic script pe Mac care citește din API-ul local | zero configurare | doar când stai la laptop |
+| **Notificare desktop** | un mic script local care citește din API-ul local | zero configurare | doar când stai la laptop |
 | **Web Push** din interfață | notificări din browser | fără aplicație extra | cere HTTPS și browserul pornit |
 
 Regulile de trimitere:
@@ -152,14 +152,14 @@ Stack-ul propus: backend FastAPI (Python), care servește și API-ul; frontend �
 
 ### Acces din exterior
 
-Tracker-ul folosește tunelul Cloudflare care rulează deja pe Mac. Nu creează unul nou, ci adaugă două reguli de ingress în configurarea existentă:
+Tracker-ul nu configurează singur accesul din exterior. Într-un tunel Cloudflare se adaugă două reguli de ingress (hostname-urile de mai jos sunt exemple):
 
 | Hostname | Duce la | Protecție |
 | --- | --- | --- |
-| `tracker.romdata.ro` | `web`, pe portul publicat local (de exemplu `localhost:8080`) | Cloudflare Access, doar emailul tău |
-| `ntfy.romdata.ro` | `ntfy`, pe portul publicat local (de exemplu `localhost:8090`) | autentificarea proprie ntfy (`auth-default-access: deny-all` și un token pentru telefon), fără Access |
+| `tracker.example.com` | `web`, pe portul publicat local (de exemplu `localhost:8080`) | Cloudflare Access, doar contul tău |
+| `ntfy.example.com` | `ntfy`, pe portul publicat local (de exemplu `localhost:8090`) | autentificarea proprie ntfy (`auth-default-access: deny-all` și un token pentru telefon), fără Access |
 
-ntfy rămâne în afara Cloudflare Access pentru că aplicația de pe telefon nu poate trece prin login-ul Access. Containerele publică porturile doar pe `127.0.0.1`, așa că rămân inaccesibile din rețeaua locală. Celelalte aplicații private de pe tunel nu sunt afectate.
+ntfy rămâne în afara Cloudflare Access pentru că aplicația de pe telefon nu poate trece prin login-ul Access. Containerele publică porturile doar pe `127.0.0.1`, așa că rămân inaccesibile din rețeaua locală.
 
 ## Aspecte legale și riscuri
 
@@ -172,7 +172,7 @@ Pentru uz personal, la volum mic, riscul principal e tehnic, nu juridic. Lucruri
 | Date personale (GDPR) | telefoane și nume ale proprietarilor | telefonul se stochează doar ca hash; textul brut rămâne local |
 | Drepturi asupra pozelor | pozele aparțin publicatorilor | stocate doar local pentru comparare, nerepublicate |
 | Schimbări de structură | un parser se strică fără avertisment | teste pe pagini salvate și o alertă când un adapter întoarce 0 rezultate |
-| Mac oprit sau în sleep | nu rulează colectarea | la pornire rulează o recuperare: mai multe pagini de căutare, sortate după cele mai noi; anunțurile apărute și dispărute cât e Mac-ul închis se pierd; rezumatul zilnic arată golurile; dacă devine o problemă, \`worker\` se mută pe un mini-server |
+| Calculator oprit sau în sleep | nu rulează colectarea | la pornire rulează o recuperare: mai multe pagini de căutare, sortate după cele mai noi; anunțurile apărute și dispărute cât e calculatorul oprit se pierd; rezumatul zilnic arată golurile; dacă devine o problemă, \`worker\` se mută pe un mini-server |
 
 Dacă vrei să-l deschizi altor utilizatori, trebuie un aviz juridic despre termenii platformelor și despre GDPR. Atunci ar fi preferabile parteneriatele sau API-urile oficiale, unde există.
 
@@ -201,6 +201,6 @@ Ce trebuie decis înainte de codul pentru etapa 1:
 
 - [x] Acces de pe telefon: Cloudflare Tunnel către `ntfy` și `web`, cu Cloudflare Access în fața interfeței.
 - [x] Etaj: parter simplu, parter înalt sau etajul 1.
-- [x] Mac-ul nu stă mereu pornit: colectarea rulează când e deschis și recuperează la pornire.
-- [x] Domeniu: romdata.ro, prin tunelul Cloudflare existent pe Mac.
+- [x] Calculatorul nu stă mereu pornit: colectarea rulează când e deschis și recuperează la pornire.
+- [x] Domeniu: unul propriu, prin Cloudflare Tunnel.
 - [x] Interval de preț: 130.000–165.000 €.

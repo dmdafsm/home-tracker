@@ -1,6 +1,6 @@
 # Architecture
 
-A single Python package (`src/hometracker`) with an argparse CLI, run by Docker Compose on the maintainer's Mac. This page describes what is implemented (stage 1); the target design for later stages is in the [plan](plan.md).
+A single Python package (`src/hometracker`) with an argparse CLI, run by Docker Compose on a single machine. This page describes what is implemented (stage 1); the target design for later stages is in the [plan](plan.md).
 
 ## Containers
 
@@ -11,7 +11,7 @@ A single Python package (`src/hometracker`) with an argparse CLI, run by Docker 
 | `ntfy` | `binwiederhier/ntfy` | push notifications for the phone (`ntfydata` volume) | `127.0.0.1:8090` |
 | `web` | planned (stage 2) | FastAPI interface | `127.0.0.1:8080` |
 
-`./data` and `./profiles` are bind-mounted into the worker. The Cloudflare tunnel already running on the Mac routes `ntfy.romdata.ro` (and later `tracker.romdata.ro`, behind Access) to those loopback ports. See [ADR 0001](engineering/decisions/0001-docker-compose.md).
+`./data` and `./profiles` are bind-mounted into the worker. Outside access is a tunnel configured outside this repository (for example Cloudflare Tunnel) that routes one hostname to ntfy and, later, one behind Cloudflare Access to the web interface. See [ADR 0001](engineering/decisions/0001-docker-compose.md).
 
 ## Data flow
 
