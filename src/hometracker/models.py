@@ -15,6 +15,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    event,
     inspect,
     text,
 )
@@ -210,7 +211,14 @@ class OsmBuilding(Base):
 
 
 def make_engine(url: str) -> Engine:
-    return create_engine(url, future=True, pool_pre_ping=True)
+    engine = create_engine(url, future=True, pool_pre_ping=True)
+    if engine.dialect.name == "sqlite":
+        # SQLite nu verifică cheile străine implicit; le verificăm ca PostgreSQL, și în teste.
+        @event.listens_for(engine, "connect")
+        def _foreign_keys(connection, _record) -> None:
+            connection.execute("PRAGMA foreign_keys=ON")
+
+    return engine
 
 
 def add_missing_columns(engine: Engine) -> list[str]:
