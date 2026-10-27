@@ -1,16 +1,22 @@
 """Testele adapterelor pe pagini sintetice care reproduc structura așteptată.
 
 Paginile reale se schimbă des. Când un adapter nu mai găsește nimic, salvează o pagină
-reală cu `hometracker dump <url>`, pune-o în tests/fixtures/ și adaugă un test pe ea.
+reală cu `hometracker dump <url>` (rămâne local, în data/debug/), apoi pune în tests/fixtures/
+o copie sintetică: aceeași structură, cu valori inventate (ADR 0003).
 """
 
 import json
+from pathlib import Path
 
+import pytest
+
+from hometracker.adapters import ListingRemoved
 from hometracker.adapters.base import merge, with_query_param
 from hometracker.adapters.imobiliare import ImobiliareAdapter
 from hometracker.adapters.olx import OlxAdapter
 from hometracker.adapters.storia import StoriaAdapter
 from hometracker.config import Settings
+from hometracker.schema import ListingData
 
 SETTINGS = Settings()
 
@@ -213,3 +219,47 @@ def test_imobiliare_detail():
 def test_with_query_param_replaces_page():
     url = with_query_param("https://x.test/a?priceMin=1&page=2", "page", 3)
     assert url == "https://x.test/a?priceMin=1&page=3"
+
+
+# ------------------------------------------------------- anunțuri expirate
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def fixture(name: str) -> str:
+    return (FIXTURES / name).read_text(encoding="utf-8")
+
+
+def test_storia_removed_and_not_found_pages_are_detected():
+    adapter = StoriaAdapter(None, SETTINGS)
+    url = "https://www.storia.ro/ro/oferta/apartament-2-camere-50-mp-strada-exemplu-IDtest1"
+    assert adapter.is_removed(fixture("storia_detail_removed_synthetic.html"), url)
+    assert adapter.is_removed(fixture("storia_not_found_synthetic.html"), url)
+
+
+def test_storia_active_pages_are_not_removed():
+    adapter = StoriaAdapter(None, SETTINGS)
+    assert not adapter.is_removed(fixture("storia_detail_active_synthetic.html"), "https://www.storia.ro/x")
+    assert not adapter.is_removed(STORIA_DETAIL, "https://www.storia.ro/x")  # fără câmpul status
+    assert not adapter.is_removed("<html><body>altceva</body></html>", "https://www.storia.ro/x")
+
+
+def test_fetch_detail_raises_for_a_removed_page_served_with_200():
+    class Response:
+        def __init__(self, text, url):
+            self.text, self.url = text, url
+
+    class Client:
+        def get(self, url):
+            return Response(fixture("storia_detail_removed_synthetic.html"), url)
+
+    adapter = StoriaAdapter(Client(), SETTINGS)
+    item = ListingData(platform="storia", external_id="1000001", url="https://www.storia.ro/ro/oferta/x-IDtest1")
+    with pytest.raises(ListingRemoved):
+        adapter.fetch_detail(item)
+
+
+def test_unverified_adapters_never_report_removed():
+    # OLX și Imobiliare.ro nu au încă o pagină reală de anunț expirat verificată; până atunci rămân pe 404/410.
+    for adapter in (OlxAdapter(None, SETTINGS), ImobiliareAdapter(None, SETTINGS)):
+        assert not adapter.is_removed(fixture("storia_detail_removed_synthetic.html"), "https://x.test/")

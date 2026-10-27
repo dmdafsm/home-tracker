@@ -114,6 +114,10 @@ pe platformă). Pașii de urmat:
    doar local, în `data/debug/`.
 3. Ajustează adapterul din `src/hometracker/adapters/` până trece testul.
 
+**OLX e dezactivat** în profilul inclus: din octombrie 2026 răspunde colectorului cu HTTP 403
+(„Request blocked”, de la CloudFront), chiar și pentru căutare. Adapterul rămâne în cod, dar
+sursa are `enabled: false` până există o cale permisă de colectare.
+
 Adapterele nu ocolesc protecțiile site-urilor. Dacă un site cere o verificare (CAPTCHA),
 rularea se oprește pentru platforma respectivă și reîncearcă la intervalul următor.
 

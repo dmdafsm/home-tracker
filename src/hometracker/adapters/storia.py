@@ -89,6 +89,18 @@ class StoriaAdapter(Adapter):
     name = "storia"
     page_param = "page"
 
+    def is_removed(self, html: str, url: str) -> bool:
+        # Un anunț expirat vine cu HTTP 410 și `ad.status` = "removed_by_user"; unul inexistent, cu 404 și
+        # pagina Next.js "/404". Codurile HTTP sunt tratate în pipeline; aici prindem aceleași stări dacă
+        # pagina ar veni totuși cu 200. Un anunț activ are `ad.status` = "active" (verificat octombrie 2026).
+        data = next_data(html)
+        if not isinstance(data, dict):
+            return False
+        if data.get("page") == "/404":
+            return True
+        status = dig(data, "props", "pageProps", "ad", "status")
+        return isinstance(status, str) and status != "active"
+
     def parse_search(self, html: str, url: str) -> Iterator[ListingData]:
         data = next_data(html)
         if data is None:
