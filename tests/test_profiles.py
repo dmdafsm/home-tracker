@@ -29,9 +29,14 @@ def test_bundled_profile_loads():
     p = profile()
     assert p.name == "gheorgheni-mama"
     assert p.filters.floors == ["ground", "raised_ground", "1"]
-    assert set(p.sources) == {"storia", "olx", "imobiliare"}
+    assert set(p.sources) == {"storia", "olx", "imobiliare", "publi24", "lajumate"}
     # OLX blochează colectorul (HTTP 403); rămâne dezactivat până există o cale permisă.
-    assert {name for name, source in p.sources.items() if source.enabled} == {"storia", "imobiliare"}
+    assert {name for name, source in p.sources.items() if source.enabled} == {
+        "storia",
+        "imobiliare",
+        "publi24",
+        "lajumate",
+    }
 
 
 def test_first_floor_with_balcony_scores_full():

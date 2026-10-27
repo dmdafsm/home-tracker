@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from .models import Listing, Photo, Property
 from .parsing import normalize
 from .photos import hamming, is_informative
+from .publishers import publisher_key
 
 # Aceeași poză: pHash aproape identic, sau pHash puțin mai departe dar confirmat de dHash
 # (poze redimensionate, recomprimate sau cu un watermark mic).
@@ -230,14 +231,6 @@ def find_matching_property(session: Session, listing: Listing) -> PropertyMatch 
         if best is None or score > best.score:
             best = PropertyMatch(other.property_id, other.listing_id, score, tuple(reasons), shared)
     return best
-
-
-def publisher_key(listing: Listing) -> str | None:
-    """Cine a publicat anunțul: telefonul (hash) sau numele normalizat; None dacă nu se știe."""
-    if listing.phone_hash:
-        return f"phone:{listing.phone_hash}"
-    name = " ".join((listing.publisher_name or "").lower().split())
-    return f"name:{name}" if name else None
 
 
 def find_republished_from(session: Session, listing: Listing) -> Listing | None:

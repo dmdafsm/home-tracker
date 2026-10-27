@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from .config import Settings
+from .labels import labels_for
 from .models import Alert, Listing, RunLog, SummaryLog, as_utc, utcnow
 from .notify import PLATFORM_NAMES, Message, Notifier, floor_label, format_price
 from .pipeline import listing_to_data
@@ -84,6 +85,20 @@ def build_summary(session: Session, profile: Profile, start: datetime, end: date
         for listing in republished
         if listing.property_id in alerted or match(profile, listing_to_data(listing)).passed
     ]
+
+    # Ce a ascuns utilizatorul sau a marcat ca fals nu mai apare în rezumat.
+    labels = labels_for(
+        session,
+        {item.property_id for item in [*(pair[0] for pair in summary.weak), *summary.removed, *summary.republished]},
+    )
+
+    def wanted(listing: Listing) -> bool:
+        label = labels.get(listing.property_id)
+        return label is None or not (label.hidden or label.verdict == "fake")
+
+    summary.weak = [pair for pair in summary.weak if wanted(pair[0])]
+    summary.removed = [listing for listing in summary.removed if wanted(listing)]
+    summary.republished = [listing for listing in summary.republished if wanted(listing)]
 
     summary.gaps = collection_gaps(session, profile, start, end, settings)
     summary.alerts = Counter(

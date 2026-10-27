@@ -25,7 +25,13 @@ from .summary import build_summary, due_period, format_summary, send_due_summari
 
 log = logging.getLogger("hometracker")
 
-HOST_TO_PLATFORM = {"storia.ro": "storia", "olx.ro": "olx", "imobiliare.ro": "imobiliare"}
+HOST_TO_PLATFORM = {
+    "storia.ro": "storia",
+    "olx.ro": "olx",
+    "imobiliare.ro": "imobiliare",
+    "publi24.ro": "publi24",
+    "lajumate.ro": "lajumate",
+}
 
 
 def _setup(settings: Settings):

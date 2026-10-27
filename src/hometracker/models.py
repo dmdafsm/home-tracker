@@ -46,6 +46,20 @@ class Property(Base):
     listings: Mapped[list[Listing]] = relationship(back_populates="property")
 
 
+class Publisher(Base):
+    """Cine publică: identificat prin telefon (hash) sau, fără telefon, prin numele normalizat."""
+
+    __tablename__ = "publisher"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(160), unique=True)
+    name: Mapped[str | None] = mapped_column(String(256))
+    declared_type: Mapped[str | None] = mapped_column(String(16))  # ce declară anunțurile: owner / agency
+    phone_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Listing(Base):
     """O apariție a unui anunț pe o platformă."""
 
@@ -73,6 +87,7 @@ class Listing(Base):
     publisher_name: Mapped[str | None] = mapped_column(String(256))
     publisher_type: Mapped[str | None] = mapped_column(String(16))  # owner / agency / unknown
     phone_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    publisher_id: Mapped[int | None] = mapped_column(Integer, index=True)
 
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
@@ -156,6 +171,30 @@ class RunLog(Base):
     found: Mapped[int] = mapped_column(Integer, default=0)
     new: Mapped[int] = mapped_column(Integer, default=0)
     error: Mapped[str | None] = mapped_column(Text)
+
+
+class PropertyLabel(Base):
+    """Starea pusă de utilizator pe un apartament: salvat, ascuns, verdict după ce a sunat."""
+
+    __tablename__ = "property_label"
+
+    property_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    saved: Mapped[bool] = mapped_column(Boolean, default=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    verdict: Mapped[str | None] = mapped_column(String(16))  # real / fake
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class LabelEvent(Base):
+    """Fiecare acțiune din interfață, păstrată pentru calibrarea ponderilor (deduplicare, autenticitate)."""
+
+    __tablename__ = "label_event"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    property_id: Mapped[int] = mapped_column(Integer, index=True)
+    listing_id: Mapped[int | None] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 class SummaryLog(Base):

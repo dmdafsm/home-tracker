@@ -112,6 +112,12 @@ def test_page_content_is_escaped_and_links_are_http_only(web):
     assert "javascript:" not in client.get(f"/property/{property_id}").text
 
 
+def test_pages_send_the_referrer_within_the_app_only(web):
+    *_, client = web
+    # no-referrer ar face browserul să trimită „Origin: null” la POST, iar butoanele ar primi 403.
+    assert '<meta name="referrer" content="same-origin">' in client.get("/").text
+
+
 def test_healthz_and_no_api_docs(web):
     *_, client = web
     assert client.get("/healthz").json() == {"ok": True}

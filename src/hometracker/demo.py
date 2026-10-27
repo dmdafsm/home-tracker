@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 from .config import Settings
 from .models import Alert, Listing, ListingSnapshot, Photo, Property, init_db, make_engine, utcnow
 from .photos import image_hashes, save_image
+from .publishers import link_missing_publishers
 
 STREETS = ["Strada Exemplu", "Bulevardul Test", "Aleea Demo", "Strada Model"]
 
@@ -109,5 +110,6 @@ def create_demo(settings: Settings, apartments: int = 8) -> int:
                 session.add(
                     Alert(profile="gheorgheni-mama", property_id=prop.id, listing_id=first.id, kind="new", score=90)
                 )
+        link_missing_publishers(session)
         session.commit()
     return created

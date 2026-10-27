@@ -4,7 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="referrer" content="no-referrer">
+  <!-- same-origin, nu no-referrer: cu no-referrer browserul trimite „Origin: null” la POST și verificarea
+       CSRF din web.py refuză butoanele. Spre alte site-uri tot nu pleacă nimic. -->
+  <meta name="referrer" content="same-origin">
   <title>{% block title %}home-tracker{% endblock %}</title>
   <style>
     :root {
@@ -63,6 +65,16 @@
                    margin-right: 5px; vertical-align: -1px; background: currentColor; }
     .key.s0 { color: var(--s0); } .key.s1 { color: var(--s1); } .key.s2 { color: var(--s2); } .key.s3 { color: var(--s3); }
     .nowrap { white-space: nowrap; }
+    form.inline { display: inline; margin: 0; }
+    button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+             border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+    button:hover { border-color: var(--accent); }
+    button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .trust { font-weight: 600; }
+    .trust.high { color: var(--good); } .trust.mid { color: var(--warn); } .trust.low { color: var(--bad); }
+    ul.signals { margin: 6px 0 0; padding-left: 18px; }
+    ul.signals li { margin: 3px 0; }
     .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 14px; align-items: center; }
     .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
   </style>
@@ -70,6 +82,7 @@
 <body>
   <header class="top">
     <h1><a href="/">home-tracker</a></h1>
+    <nav class="small"><a href="/">Apartamente</a> · <a href="/publishers">Publicatori</a></nav>
     {% block header %}{% endblock %}
   </header>
   <main>{% block content %}{% endblock %}</main>

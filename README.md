@@ -1,7 +1,7 @@
 # home-tracker
 
 Tracker de piață imobiliară care rulează local, în Docker. Colectează anunțuri de pe
-Storia, OLX și Imobiliare.ro și grupează pe apartamente fizice anunțurile care au
+Storia, Imobiliare.ro, Publi24 și Lajumate (OLX e dezactivat, vezi mai jos) și grupează pe apartamente fizice anunțurile care au
 aceleași poze. Când apare un apartament care se potrivește unui profil de căutare,
 trimite o notificare pe telefon prin [ntfy](https://ntfy.sh) și, opțional, pe email.
 
@@ -104,6 +104,24 @@ login propriu, deci din exterior se deschide doar printr-un hostname separat al 
     service: http://localhost:8080
 ```
 
+Pe pagina unui apartament poți să-l **salvezi**, să-l **ascunzi**, să-l marchezi **confirmat real**
+sau **fals** după ce ai sunat, iar la fiecare anunț poți spune **nu e același apartament** (anunțul
+trece într-un apartament separat). Scăderile de preț trimit alertă doar pentru apartamentele
+salvate (`notify.price_drop_scope` în profil); cele ascunse sau false nu mai trimit alerte și nu
+mai apar în rezumat. Feed-ul are filtre pentru salvate, ascunse și dispărute.
+
+Fiecare apartament are un **scor de autenticitate** (0–100) cu semnalele care l-au scăzut:
+aceleași poze la mai mulți publicatori, o agenție care a publicat după proprietar, un preț mult
+sub mediana apartamentelor asemănătoare, un „proprietar” cu telefonul la multe apartamente, poze
+dintr-un anunț dispărut, republicări luni de zile la același preț, detalii lipsă. Scorul nu
+dovedește nimic; arată ce merită verificat la telefon. În profil, `notify.min_authenticity`
+poate opri alertele instant sub un prag.
+
+Pagina **Publicatori** arată, pentru fiecare agenție sau proprietar, câte anunțuri active are, câte
+apartamente, ce procent a preluat de la alții (apartamentul apăruse întâi la alt publicator) și
+cu cât e în medie mai scump sau mai ieftin decât ceilalți pentru aceleași apartamente. Un
+„proprietar” al cărui telefon apare la 5 sau mai multe apartamente e marcat ca posibil agent.
+
 Pentru lucrul la interfață fără date reale: `DATA_DIR=data/demo uv run hometracker demo`,
 apoi `DATA_DIR=data/demo uv run hometracker web --port 8081`.
 
@@ -171,6 +189,8 @@ rulări locale în afara Docker.
 | `src/hometracker/profiles.py` | profilurile YAML și calculul scorului |
 | `src/hometracker/dedup.py` | gruparea anunțurilor pe apartamente, după poze, și republicările |
 | `src/hometracker/history.py` | istoricul unui apartament |
+| `src/hometracker/publishers.py` | publicatorii: anunțuri preluate, diferențe de preț, posibili agenți |
+| `src/hometracker/web.py` | interfața web: apartamente, publicatori |
 | `src/hometracker/summary.py` | rezumatul zilnic |
 | `src/hometracker/pipeline.py` | o rulare completă: căutare, detaliu, salvare, alerte |
 | `src/hometracker/notify.py` | ntfy și email |

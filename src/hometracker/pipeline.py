@@ -11,14 +11,18 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from .adapters import ADAPTERS, Adapter, ListingRemoved
+from .authenticity import Assessment, Context, assess
 from .config import Settings
 from .dedup import assign_property
+from .history import property_history
 from .http import BlockedError, PoliteClient
+from .labels import label_for
 from .models import Alert, Listing, ListingSnapshot, Photo, RunLog, utcnow
 from .notify import PLATFORM_NAMES, Message, Notifier, floor_label, format_price
 from .parsing import phone_hash
 from .photos import image_hashes, save_image
 from .profiles import MatchResult, Profile, match
+from .publishers import link_missing_publishers, link_publisher
 from .schema import ListingData
 
 log = logging.getLogger(__name__)
@@ -75,6 +79,10 @@ class Pipeline:
 
     def run(self, profiles: list[Profile], pages: int) -> RunStats:
         stats = RunStats()
+        with self.sessions() as session:
+            if linked := link_missing_publishers(session):
+                log.info("%d anunțuri legate de publicatori", linked)
+            session.commit()
         for profile in profiles:
             for platform, source in profile.sources.items():
                 if not source.enabled:
@@ -159,13 +167,17 @@ class Pipeline:
                 result = match(profile, data)
             photo_urls = data.photo_urls
 
+        link_publisher(session, listing)
         if result.passed:
             if not listing.photos:
                 self._download_photos(session, listing, photo_urls)
             prop = assign_property(session, listing)
             log.info("potrivire %s: %s (%s)", profile.name, listing.url, result.score)
-            if result.score >= profile.notify.min_score and not self._already_alerted(session, profile, prop.id, "new"):
-                self._alert_new(session, profile, listing, result)
+            if (
+                result.score >= profile.notify.min_score
+                and not self._already_alerted(session, profile, prop.id, "new")
+                and self._alert_new(session, profile, listing, result)
+            ):
                 stats.alerts += 1
         return is_new
 
@@ -230,7 +242,13 @@ class Pipeline:
         drop = (old_price - new_price) / old_price * 100
         if drop < profile.notify.price_drop_percent or listing.property_id is None:
             return
-        if not self._already_alerted(session, profile, listing.property_id, "new"):
+        label = label_for(session, listing.property_id)
+        if label.hidden or label.verdict == "fake":
+            return
+        if profile.notify.price_drop_scope == "saved":
+            if not label.saved:
+                return  # doar apartamentele salvate din interfață
+        elif not self._already_alerted(session, profile, listing.property_id, "new"):
             return  # anunțul nu a fost niciodată relevant pentru acest profil
         result = match(profile, listing_to_data(listing))
         if not result.passed:
@@ -366,13 +384,41 @@ class Pipeline:
             > 0
         )
 
-    def _alert_new(self, session: Session, profile: Profile, listing: Listing, result: MatchResult) -> None:
+    def _alert_new(self, session: Session, profile: Profile, listing: Listing, result: MatchResult) -> bool:
+        label = label_for(session, listing.property_id)
+        if label.hidden or label.verdict == "fake":
+            return False
+        assessment = self._assessment(session, listing)
+        if assessment.score < profile.notify.min_authenticity and label.verdict != "real":
+            # Nu se înregistrează: dacă semnalele dispar (sau apartamentul e confirmat real), alerta poate pleca.
+            log.info(
+                "alertă oprită pentru %s: autenticitate %d sub %g",
+                listing.url,
+                assessment.score,
+                profile.notify.min_authenticity,
+            )
+            return False
         parts = [format_price(listing.price_eur), floor_label(listing.floor)]
         if listing.area_m2:
             parts.append(f"{listing.area_m2:g} mp")
         if listing.rooms:
             parts.append(f"{listing.rooms} cam.")
-        self._send(session, profile, listing, result, "new", title="Apartament nou · " + " · ".join(parts))
+        self._send(
+            session,
+            profile,
+            listing,
+            result,
+            "new",
+            title="Apartament nou · " + " · ".join(parts),
+            assessment=assessment,
+        )
+        return True
+
+    @staticmethod
+    def _assessment(session: Session, listing: Listing) -> Assessment:
+        session.flush()
+        history = property_history(session, listing.property_id)
+        return assess(history, Context.build(session)) if history else Assessment()
 
     def _send(
         self,
@@ -384,6 +430,7 @@ class Pipeline:
         *,
         title: str,
         lead: str = "",
+        assessment: Assessment | None = None,
     ) -> None:
         publisher = {"owner": "proprietar", "agency": "agenție"}.get(
             listing.publisher_type or "", "publicator necunoscut"
@@ -405,6 +452,11 @@ class Pipeline:
             )
             if line
         ]
+        assessment = assessment or self._assessment(session, listing)
+        authenticity = f"Autenticitate {assessment.score}"
+        if assessment.signals:
+            authenticity += ": " + "; ".join(signal.label for signal in assessment.signals)
+        lines.append(authenticity)
         if others:
             lines.append(
                 "Apare și pe: "

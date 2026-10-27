@@ -16,6 +16,27 @@
     {{ plural(history.listings|length, "anunț", "anunțuri") }}, {{ history.active|length }} active, {{ plural(history.republications|length, "republicare", "republicări") }}.
   </p>
   {% if not history.active %}<span class="tag bad">nu mai e activ pe nicio platformă</span>{% endif %}
+  {% set base = "/property/" ~ history.property_id ~ "/label/" %}
+  <div class="actions">
+    <form class="inline" method="post" action="{{ base }}{{ 'unsave' if label.saved else 'save' }}"><button class="{{ 'on' if label.saved }}">{{ "salvat ✓" if label.saved else "salvează" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'unhide' if label.hidden else 'hide' }}"><button class="{{ 'on' if label.hidden }}">{{ "ascuns ✓" if label.hidden else "ascunde" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'real' else 'real' }}"><button class="{{ 'on' if label.verdict == 'real' }}">confirmat real{{ " ✓" if label.verdict == "real" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'fake' else 'fake' }}"><button class="{{ 'on' if label.verdict == 'fake' }}">fals{{ " ✓" if label.verdict == "fake" }}</button></form>
+  </div>
+</section>
+
+<section>
+  {% set a = assessment %}
+  <h2>Autenticitate: <span class="trust {{ 'high' if a.score >= 70 else ('mid' if a.score >= 40 else 'low') }}">{{ a.score }}</span> / 100</h2>
+  {% if a.signals %}
+  <ul class="signals small">
+    {% for s in a.signals %}<li><strong>{{ s.label }}</strong> (−{{ s.penalty }}): {{ s.detail }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="small muted">Niciun semnal suspect găsit.</p>
+  {% endif %}
+  {% for note in a.notes %}<p class="small muted">{{ note }}</p>{% endfor %}
+  <p class="small muted">Scorul adună semnale, nu dovedește nimic: sună și verifică înainte să decizi.</p>
 </section>
 
 {% if chart %}
@@ -35,13 +56,14 @@
       <tr>
         <td>{{ listing.id }}</td>
         <td>{% set link = safe_url(listing.url) %}{% if link %}<a href="{{ link }}" rel="noopener noreferrer" target="_blank">{{ platform(listing.platform) }}</a>{% else %}{{ platform(listing.platform) }}{% endif %}</td>
-        <td>{{ publisher(listing) }}</td>
+        <td>{% if listing.publisher_id %}<a href="/publisher/{{ listing.publisher_id }}">{{ publisher(listing) }}</a>{% else %}{{ publisher(listing) }}{% endif %}</td>
         <td class="nowrap">{{ price(listing.price_eur) }}</td>
         <td class="small"><span class="nowrap">{{ day(listing.first_seen) }}</span> – <span class="nowrap">{{ day(listing.last_seen) }}</span></td>
         <td class="small">
           {% if listing.active %}<span class="tag good">activ</span>{% else %}<span class="tag bad">dispărut {{ day(listing.removed_at) }}</span>{% endif %}
           {% if listing.republished_from_id %}<span class="tag warn">republicare a #{{ listing.republished_from_id }}</span>{% endif %}
-          {% set label = match_label(listing) %}{% if label %}<div class="muted">{{ label }}</div>{% endif %}
+          {% set why = match_label(listing) %}{% if why %}<div class="muted">{{ why }}</div>{% endif %}
+          {% if history.listings|length > 1 %}<form class="inline" method="post" action="/listing/{{ listing.id }}/split"><button title="mută anunțul într-un apartament separat">nu e același apartament</button></form>{% endif %}
         </td>
       </tr>
     {% endfor %}
