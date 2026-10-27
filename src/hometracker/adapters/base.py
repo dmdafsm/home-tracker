@@ -163,3 +163,25 @@ def find_objects_with_key(data: object, key: str) -> Iterator[dict]:
             stack.extend(item.values())
         elif isinstance(item, list):
             stack.extend(item)
+
+
+_BLOCK_TAGS = ("p", "div", "ul", "ol", "h1", "h2", "h3", "h4", "h5", "h6", "tr", "section", "article", "blockquote")
+
+
+def html_to_text(markup: str | None) -> str:
+    """Descrierea HTML a unui anunț ca text, cu paragrafele și listele păstrate pe rânduri separate."""
+    if not markup:
+        return ""
+    soup = BeautifulSoup(str(markup), "lxml")
+    for br in soup.find_all("br"):
+        br.replace_with("\n")
+    for item in soup.find_all("li"):
+        item.insert_before("\n• ")
+        item.insert_after("\n")
+    for block in soup.find_all(_BLOCK_TAGS):
+        block.insert_before("\n\n")
+        block.insert_after("\n\n")
+    lines = [" ".join(line.split()) for line in soup.get_text().split("\n")]
+    text = "\n".join(lines)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return re.sub(r"\n\n(?=• )", "\n", text).strip()  # elementele unei liste rămân lipite

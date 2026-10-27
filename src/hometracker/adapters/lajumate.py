@@ -19,8 +19,6 @@ import html
 import re
 from collections.abc import Iterator
 
-from bs4 import BeautifulSoup
-
 from ..parsing import (
     detect_balcony,
     find_floor_in_text,
@@ -31,7 +29,7 @@ from ..parsing import (
     to_eur,
 )
 from ..schema import ListingData
-from .base import Adapter, dig, next_data, parse_datetime
+from .base import Adapter, dig, html_to_text, next_data, parse_datetime
 
 BASE_URL = "https://lajumate.ro"
 # Așa apar pozele în paginile site-ului (calea din JSON + numele fișierului).
@@ -70,7 +68,7 @@ def _images(ad: dict) -> list[str]:
 
 def _description(value: object) -> str:
     text = html.unescape(str(value or ""))
-    return BeautifulSoup(text, "lxml").get_text(" ", strip=True) if "<" in text else text.strip()
+    return html_to_text(text) if "<" in text else text.strip()
 
 
 class LajumateAdapter(Adapter):

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -11,14 +12,13 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
-from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from . import profile_editor
 from .authenticity import Context, assess
 from .buildyear import estimate_for
 from .config import Settings
-from .feed import PUBLISHERS, ROOMS, SORTS, FeedFilters, feed
+from .feed import PAGE_PHOTOS, PUBLISHERS, ROOMS, SORTS, SUGGESTION_PHOTOS, FeedFilters, feed, photo_ids
 from .formatting import PLATFORM_NAMES, floor_label, format_price
 from .history import PropertyHistory, match_label, property_history, publisher_label
 from .labels import ACTIONS, apply_label, label_for, split_listing
@@ -42,6 +42,30 @@ def back_to(target: str | None, default: str) -> str:
     if target and target.startswith("/") and not target.startswith(("//", "/\\")):
         return target
     return default
+
+
+_BULLET = re.compile(r"^\s*(?:[-–—•*·▪►✓✔☑➤]|\d{1,2}[.)])\s+")
+
+
+def paragraphs(text: str | None) -> Markup:
+    """Textul unui anunț ca HTML citibil: paragrafe la rânduri goale, liste din rândurile cu „-”, „•”, „1.”."""
+    html = []
+    for block in re.split(r"\n\s*\n", (text or "").replace("\r\n", "\n").strip()):
+        prose: list[str] = []
+        items: list[str] = []
+        for line in [line.strip() for line in block.split("\n") if line.strip()] + [None]:
+            bullet = line is not None and _BULLET.match(line)
+            if prose and (line is None or bullet):
+                html.append("<p>" + "<br>".join(str(escape(part)) for part in prose) + "</p>")
+                prose = []
+            if items and (line is None or not bullet):
+                html.append("<ul>" + "".join(f"<li>{escape(item)}</li>" for item in items) + "</ul>")
+                items = []
+            if bullet:
+                items.append(_BULLET.sub("", line))
+            elif line is not None:
+                prose.append(line)
+    return Markup("".join(html))
 
 
 def plural(count: int, one: str, many: str) -> str:
@@ -123,6 +147,7 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
         safe_url=safe_url,
         plural=plural,
         area=area_label,
+        paragraphs=paragraphs,
     )
 
     def profiles() -> list[Profile]:
@@ -174,22 +199,21 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
             history = property_history(session, property_id)
             if history is None:
                 raise HTTPException(404, "apartament inexistent")
-            photos = session.scalars(
-                select(Photo)
-                .where(Photo.listing_id.in_([listing.id for listing in history.listings]), Photo.path.is_not(None))
-                .order_by(Photo.listing_id, Photo.position)
-            ).all()
+            duplicates = possible_duplicates(session, [property_id]).get(property_id, [])
             return TEMPLATES.TemplateResponse(
                 request,
                 "property.html",
                 {
                     "history": history,
-                    "photos": photos,
+                    "photos": photo_ids(session, property_id, PAGE_PHOTOS),
+                    "duplicate_photos": {
+                        d.property_id: photo_ids(session, d.property_id, SUGGESTION_PHOTOS) for d in duplicates
+                    },
                     "chart": price_chart(history),
                     "assessment": assess(history, Context.build(session)),
                     "label": label_for(session, property_id),
                     "year": estimate_for(session, history.listings),
-                    "duplicates": possible_duplicates(session, [property_id]).get(property_id, []),
+                    "duplicates": duplicates,
                     "now": utcnow(),
                 },
             )

@@ -1,4 +1,4 @@
-"""Linia de comandă: `hometracker loop | run | property | web | demo | dump`."""
+"""Linia de comandă: `hometracker loop | run | property | web | demo | reparse-descriptions | dump`."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from .http import PoliteClient
 from .models import init_db, make_engine
 from .pipeline import Pipeline
 from .profiles import load_profiles
+from .reparse import reparse_descriptions
 
 log = logging.getLogger("hometracker")
 
@@ -125,6 +126,16 @@ def cmd_demo(args: argparse.Namespace) -> None:
     print(f"{count} anunțuri demo în {settings.database_url}")
 
 
+def cmd_reparse(args: argparse.Namespace) -> None:
+    """Actualizează descrierile din paginile arhivate în data/raw/, fără cereri către platforme."""
+    settings = load_settings()
+    sessions = _setup(settings)
+    with sessions() as session:
+        changed = reparse_descriptions(session, settings)
+        session.commit()
+    print(f"{changed} descrieri actualizate din arhivă")
+
+
 def cmd_dump(args: argparse.Namespace) -> None:
     """Descarcă o pagină, o salvează în data/debug și arată ce extrage adapterul din ea."""
     settings = load_settings()
@@ -192,6 +203,10 @@ def main(argv: list[str] | None = None) -> None:
     demo = sub.add_parser("demo", help="umple o bază de date goală cu date sintetice")
     demo.add_argument("--apartments", type=int, default=8)
     demo.set_defaults(func=cmd_demo)
+
+    sub.add_parser(
+        "reparse-descriptions", help="refă descrierile din paginile arhivate (data/raw), fără cereri noi"
+    ).set_defaults(func=cmd_reparse)
 
     dump = sub.add_parser("dump", help="salvează o pagină și arată ce extrage adapterul")
     dump.add_argument("url")

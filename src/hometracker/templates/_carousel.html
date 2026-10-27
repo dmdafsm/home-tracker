@@ -1,0 +1,26 @@
+{#- Carusel fără JavaScript. Cu mouse și tastatură: câte un radio pe poză, săgețile sunt etichete pentru
+    radioul vecin, iar CSS-ul mută banda după radioul bifat (merge în orice browser; săgețile ←/→ schimbă
+    poza când caruselul are focus). Pe ecrane tactile: banda devine derulabilă, cu scroll-snap, pentru swipe.
+    `link`: unde duce un click pe poză (pagina apartamentului, din feed). -#}
+{% macro carousel(key, photo_ids, link=none, large=false, label="Poze") -%}
+{%- set n = photo_ids|length -%}
+<div class="carousel{{ ' large' if large }}" role="group" aria-roledescription="carusel" aria-label="{{ label }}">
+  {%- if n > 1 %}{% for photo_id in photo_ids %}<input type="radio" name="{{ key }}" id="{{ key }}-{{ loop.index }}" aria-label="Poza {{ loop.index }} din {{ n }}" {% if loop.first %}checked{% endif %}>{% endfor %}{% endif %}
+  <div class="track">
+    {%- for photo_id in photo_ids %}
+    <div class="slide">
+      {%- if link %}<a href="{{ link }}" tabindex="-1" aria-hidden="true">{% endif -%}
+      <img src="/photo/{{ photo_id }}" alt="Poza {{ loop.index }} din {{ n }}" loading="{{ 'eager' if large and loop.first else 'lazy' }}" decoding="async">
+      {%- if link %}</a>{% endif %}
+      {%- if n > 1 %}
+      <label class="nav prev" for="{{ key }}-{{ loop.index - 1 if not loop.first else n }}" title="poza anterioară"><span class="icon" aria-hidden="true">chevron_left</span></label>
+      <label class="nav next" for="{{ key }}-{{ loop.index + 1 if not loop.last else 1 }}" title="poza următoare"><span class="icon" aria-hidden="true">chevron_right</span></label>
+      <span class="count">{{ loop.index }} / {{ n }}</span>
+      {%- endif %}
+    </div>
+    {%- else %}
+    <div class="slide none"><span class="icon" aria-hidden="true">image_not_supported</span><span class="small">fără poze descărcate</span></div>
+    {%- endfor %}
+  </div>
+</div>
+{%- endmacro %}

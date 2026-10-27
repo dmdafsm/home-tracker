@@ -18,8 +18,10 @@ from .models import Listing, Photo, PropertyLabel, as_utc
 from .pipeline import listing_to_data
 from .profiles import MatchResult, Profile, match
 
-# Câte poze intră în caruselul unui card.
+# Câte poze intră în caruselul unui card, al paginii de apartament și la o sugestie de duplicat.
 CARD_PHOTOS = 8
+PAGE_PHOTOS = 40  # pragul pentru care base.html are reguli de carusel
+SUGGESTION_PHOTOS = 4
 
 SORTS = {
     "score": "potrivire",
@@ -165,13 +167,15 @@ def _sort_key(sort: str):
     return keys[sort]
 
 
-def _photo_ids(session, history: PropertyHistory) -> list[int]:
+def photo_ids(session, property_id: int, limit: int) -> list[int]:
+    """Pozele descărcate ale unui apartament, în ordinea anunțurilor și a pozelor din anunț."""
     return list(
         session.scalars(
             select(Photo.id)
-            .where(Photo.listing_id.in_([listing.id for listing in history.listings]), Photo.path.is_not(None))
-            .order_by(Photo.listing_id, Photo.position)
-            .limit(CARD_PHOTOS)
+            .join(Listing, Photo.listing_id == Listing.id)
+            .where(Listing.property_id == property_id, Photo.path.is_not(None))
+            .order_by(Listing.first_seen, Photo.listing_id, Photo.position)
+            .limit(limit)
         )
     )
 
@@ -203,7 +207,7 @@ def feed(session, profile: Profile, filters: FeedFilters | None = None) -> list[
             history,
             listing,
             result,
-            _photo_ids(session, history),
+            photo_ids(session, property_id, CARD_PHOTOS),
             assess(history, context),
             label,
             estimate_for(session, history.listings),

@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Iterator
 
-from bs4 import BeautifulSoup
-
 from ..parsing import (
     detect_balcony,
     find_floor_in_text,
@@ -15,7 +13,7 @@ from ..parsing import (
     to_eur,
 )
 from ..schema import ListingData
-from .base import Adapter, dig, find_objects_with_key, next_data, parse_datetime
+from .base import Adapter, dig, find_objects_with_key, html_to_text, next_data, parse_datetime
 
 BASE_URL = "https://www.storia.ro"
 
@@ -77,12 +75,6 @@ def _location_text(location: object) -> str:
         if isinstance(name, str):
             parts.append(name)
     return ", ".join(dict.fromkeys(parts))
-
-
-def _html_to_text(html: str | None) -> str:
-    if not html:
-        return ""
-    return BeautifulSoup(html, "lxml").get_text(" ", strip=True)
 
 
 class StoriaAdapter(Adapter):
@@ -151,7 +143,7 @@ class StoriaAdapter(Adapter):
         price = price_entry.get("value")
         currency = price_entry.get("currency")
         price_value, _ = parse_price(price)
-        description = _html_to_text(ad.get("description"))
+        description = html_to_text(ad.get("description"))
         title = ad.get("title") or ""
         features = " ".join(
             str(f) for f in (ad.get("features") or []) + list(_flatten_features(ad.get("featuresByCategory")))

@@ -81,7 +81,8 @@ Dacă `cloudflared` rulează la rândul lui într-un container Docker, foloseșt
 
 ## Interfața web
 
-- **Apartamente** (feed-ul): apartamentele care trec de profilul ales, cu un carusel de poze,
+- **Apartamente** (feed-ul): apartamentele care trec de profilul ales, cu un carusel de poze
+  (săgeți sau tastele ←/→, swipe pe telefon; click pe poză deschide apartamentul),
   prețul, prețul pe mp, etajul, anul blocului, scorul de autenticitate și etichetele. Filtre
   (text, preț, suprafață, camere, platforme, proprietar sau agenție, salvate, ascunse,
   dispărute) și sortări (potrivire, cele mai noi, preț, preț pe mp, suprafață, autenticitate).
@@ -91,7 +92,7 @@ Dacă `cloudflared` rulează la rândul lui într-un container Docker, foloseșt
   care le-au legat, anul construcției cu dovezile, istoricul prețului, pozele și descrierea.
   Poți să-l **salvezi**, să-l **ascunzi**, să-l marchezi **confirmat real** sau **fals** după ce ai
   sunat, iar la fiecare anunț poți spune **nu e același apartament**. Secțiunea **posibil același
-  apartament** are butoanele **e același apartament** (le unește) și **nu e același**.
+  apartament** arată câteva poze din fiecare apartament sugerat și are butoanele **e același apartament** (le unește) și **nu e același**.
 - **Scorul de autenticitate** (0–100) vine cu semnalele care l-au scăzut: aceleași poze la mai
   mulți publicatori, o agenție care a publicat după proprietar, un preț mult sub mediana
   apartamentelor asemănătoare, un „proprietar” cu telefonul la multe apartamente, poze dintr-un
@@ -125,6 +126,7 @@ docker compose exec worker hometracker run          # o rulare imediată
 docker compose exec worker hometracker run --catchup
 docker compose exec worker hometracker property "<url>"  # istoricul apartamentului: anunțuri, prețuri, republicări
 docker compose exec worker hometracker dump "<url>" # verifică ce extrage un adapter
+docker compose exec worker hometracker reparse-descriptions  # refă descrierile din paginile arhivate, fără cereri
 ```
 
 ## Când un adapter nu mai merge

@@ -6,8 +6,6 @@ import json
 import re
 from collections.abc import Iterator
 
-from bs4 import BeautifulSoup
-
 from ..parsing import (
     detect_balcony,
     find_floor_in_text,
@@ -19,7 +17,7 @@ from ..parsing import (
     to_eur,
 )
 from ..schema import ListingData
-from .base import Adapter, dig, json_ld, parse_datetime
+from .base import Adapter, dig, html_to_text, json_ld, parse_datetime
 
 _STATE = re.compile(r"window\.__PRERENDERED_STATE__\s*=\s*(\"(?:[^\"\\]|\\.)*\")", re.S)
 
@@ -74,12 +72,6 @@ def _is_storia_mirror(ad: dict) -> bool:
     return "storia.ro" in external or partner in ("storia", "otodom")
 
 
-def _description_text(html: str | None) -> str:
-    if not html:
-        return ""
-    return BeautifulSoup(str(html), "lxml").get_text(" ", strip=True)
-
-
 class OlxAdapter(Adapter):
     name = "olx"
     page_param = "page"
@@ -93,7 +85,7 @@ class OlxAdapter(Adapter):
         if price is None:
             price, currency = parse_price(dig(ad, "price", "displayValue"))
         title = ad.get("title") or ""
-        description = _description_text(ad.get("description"))
+        description = html_to_text(ad.get("description"))
         floor = parse_floor_value(_param_value(params.get("floor"))) or find_floor_in_text(f"{title} {description}")
         rooms_value = _param_value(params.get("rooms"))
         rooms_match = re.search(r"\d+", str(rooms_value or ""))

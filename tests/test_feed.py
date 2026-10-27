@@ -99,6 +99,11 @@ def test_feed_page_form_carousel_and_card_actions(client):
     assert '<details class="filters" open>' in page  # filtre active: panoul e deschis
     assert page.count('class="slide"') == 6  # câte 3 poze în caruselul fiecărui card
     assert "1 / 3" in page
+    # Caruselul: un radio pe poză (primul bifat), săgeți spre vecini, iar click pe poză duce la apartament.
+    first = re.search(r'name="(c\d+)" id="\1-1"', page).group(1)
+    assert page.count(f'name="{first}"') == 3 and f'id="{first}-1" aria-label="Poza 1 din 3" checked' in page
+    assert f'for="{first}-3" title="poza anterioară"' in page and f'for="{first}-2" title="poza următoare"' in page
+    assert re.search(rf'<a href="/property/{first[1:]}" tabindex="-1" aria-hidden="true"><img', page)
     # Salvează și ascunde se întorc în feed cu aceleași filtre.
     actions = re.findall(r'action="(/property/\d+/label/(?:save|hide)\?next=[^"]+)"', page)
     assert len(actions) == 4 and all("next=/%3Fprofile%3Dtest%26rooms%3D2" in a for a in actions)

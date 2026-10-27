@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_carousel.html" import carousel %}
 {% block title %}{{ profile.name }} · home-tracker{% endblock %}
 {% block header %}
   <div class="subtitle small">{{ profile.description or profile.name }}</div>
@@ -99,7 +100,7 @@
 <div class="cards">
   {% for item in items %}
   {% set h = item.history %}
-  {% set range = h.price_range() %}
+  {% set prices = h.price_range() %}
   {% set detail = "/property/" ~ h.property_id %}
   {% set base = detail ~ "/label/" %}
   {% set back = "?next=" ~ ((here ~ "#p" ~ h.property_id)|urlencode) %}
@@ -107,17 +108,10 @@
   <article class="card" id="p{{ h.property_id }}">
     <div class="media">
       <span class="tag score" title="potrivire cu profilul: {{ item.result.reasons|join(', ') }}">potrivire {{ item.result.score|round|int }}</span>
-      <div class="carousel" aria-label="Poze">
-        {% for photo_id in item.photo_ids %}
-        <div class="slide"><img src="/photo/{{ photo_id }}" alt="Poza {{ loop.index }} din {{ loop.length }}" loading="lazy">
-          <span class="count">{{ loop.index }} / {{ loop.length }}</span></div>
-        {% else %}
-        <div class="none"><span class="icon" aria-hidden="true">image_not_supported</span><span class="small">fără poze descărcate</span></div>
-        {% endfor %}
-      </div>
+      {{ carousel("c" ~ h.property_id, item.photo_ids, link=detail) }}
     </div>
     <div class="body">
-      <div class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</div>
+      <div class="price">{{ price(prices[0]) if prices else price(None) }}{% if prices and prices[1] != prices[0] %} – {{ price(prices[1]) }}{% endif %}</div>
       <div>{{ floor(item.listing.floor) }}{% if item.listing.area_m2 %} · {{ area(item.listing.area_m2) }}{% endif %}{% if item.listing.rooms %} · {{ item.listing.rooms }} cam.{% endif %}{% if item.price_per_m2 %} · {{ price(item.price_per_m2) }}/mp{% endif %}{% if item.year %} · <span title="{{ item.year.summary }}">bloc {{ item.year.interval }}</span>{% endif %}</div>
       <a class="title-link" href="{{ detail }}"><div class="title-line">{{ item.listing.title }}</div></a>
       <div class="small muted">

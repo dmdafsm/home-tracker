@@ -1,19 +1,26 @@
 {% extends "base.html" %}
+{% from "_carousel.html" import carousel %}
 {% set first = history.first %}
-{% set range = history.price_range() %}
+{% set prices = history.price_range() %}
 {% block title %}Apartamentul {{ history.property_id }} · home-tracker{% endblock %}
 {% block header %}
   <div class="subtitle small">Apartamentul {{ history.property_id }}</div>
 {% endblock %}
+{% block style %}
+    .description { max-width: 72ch; font-size: 16px; line-height: 26px; letter-spacing: 0.15px; }
+    .description p { margin: 0 0 12px; }
+    .description ul { margin: 0 0 12px; padding-left: 22px; }
+    .description li { margin: 4px 0; }
+    details.more { border-top: 1px solid var(--outline-variant); padding-top: 8px; margin-top: 8px; }
+    details.more > summary { cursor: pointer; font-weight: 500; color: var(--primary); padding: 8px 0; }
+{% endblock %}
 {% block content %}
 {% if photos %}
-<div class="carousel large" aria-label="Poze ({{ photos|length }})">
-  {% for photo in photos %}<div class="slide"><img src="/photo/{{ photo.id }}" alt="Poza {{ loop.index }} din {{ loop.length }}" loading="{{ 'eager' if loop.first else 'lazy' }}"><span class="count">{{ loop.index }} / {{ loop.length }}</span></div>{% endfor %}
-</div>
+{{ carousel("main", photos, large=true, label="Poze (" ~ photos|length ~ ")") }}
 {% endif %}
 <section>
   <h1 class="title-large" style="margin-bottom: 8px">{{ first.title }}</h1>
-  <div class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</div>
+  <div class="price">{{ price(prices[0]) if prices else price(None) }}{% if prices and prices[1] != prices[0] %} – {{ price(prices[1]) }}{% endif %}</div>
   <div>{{ floor(first.floor) }}{% if first.area_m2 %} · {{ area(first.area_m2) }}{% endif %}{% if first.rooms %} · {{ first.rooms }} cam.{% endif %}</div>
   <p class="small muted">
     Pe piață de {{ plural(history.days_on_market(now), "zi", "zile") }}, din {{ day(first.first_seen) }}.
@@ -76,6 +83,9 @@
     <li>
       <a href="/property/{{ d.property_id }}">Apartamentul {{ d.property_id }}</a>:
       {{ platform(d.listing.platform) }}, {{ publisher(d.listing) }} · <span class="muted">{{ d.reasons|join(" · ") }}</span>
+      {% set thumbs = duplicate_photos.get(d.property_id) %}
+      {% if thumbs %}<div class="thumbs">{% for photo_id in thumbs %}<a href="/property/{{ d.property_id }}"><img src="/photo/{{ photo_id }}" alt="Apartamentul {{ d.property_id }}, poza {{ loop.index }}" loading="lazy"></a>{% endfor %}</div>
+      {% else %}<div class="small muted">fără poze descărcate</div>{% endif %}
       <div class="actions">
         <form class="inline" method="post" action="/property/{{ history.property_id }}/merge/{{ d.property_id }}"><button class="tonal"><span class="icon" aria-hidden="true">merge</span>e același apartament</button></form>
         <form class="inline" method="post" action="/property/{{ history.property_id }}/distinct/{{ d.property_id }}"><button class="text"><span class="icon" aria-hidden="true">close</span>nu e același</button></form>
@@ -137,8 +147,15 @@
 
 {% if first.description %}
 <section>
-  <h2>Descriere (prima apariție)</h2>
-  <p class="small">{{ first.description|truncate(1500) }}</p>
+  <h2>Descriere</h2>
+  <p class="small muted">Prima apariție: {{ platform(first.platform) }}, {{ publisher(first) }}, {{ day(first.first_seen) }}.</p>
+  <div class="description">{{ paragraphs(first.description) }}</div>
+  {% for listing in history.listings[1:] if listing.description and listing.description != first.description %}
+  <details class="more">
+    <summary>Descrierea de pe {{ platform(listing.platform) }} ({{ publisher(listing) }})</summary>
+    <div class="description">{{ paragraphs(listing.description) }}</div>
+  </details>
+  {% endfor %}
 </section>
 {% endif %}
 {% endblock %}
