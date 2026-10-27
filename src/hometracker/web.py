@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from .authenticity import Assessment, Context, assess
+from .buildyear import YearEstimate, estimate_for
 from .config import Settings
 from .history import PropertyHistory, match_label, property_history, publisher_label
 from .labels import ACTIONS, apply_label, label_for, labels_for, split_listing
@@ -43,6 +44,7 @@ class FeedItem:
     alerted: bool
     assessment: Assessment
     label: PropertyLabel | None
+    year: YearEstimate | None
 
     @property
     def platforms(self) -> list[str]:
@@ -85,6 +87,7 @@ def feed(
                 property_id in alerted,
                 assess(history, context),
                 label,
+                estimate_for(session, history.listings),
             )
         )
     items.sort(key=lambda item: (-item.result.score, -as_utc(item.history.listings[-1].first_seen).timestamp()))
@@ -228,6 +231,7 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                     "chart": price_chart(history),
                     "assessment": assess(history, Context.build(session)),
                     "label": label_for(session, property_id),
+                    "year": estimate_for(session, history.listings),
                     "now": utcnow(),
                 },
             )

@@ -197,6 +197,21 @@ class LabelEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
+class OsmBuilding(Base):
+    """Rezultatul unei interogări Overpass pentru o locație (inclusiv „nimic găsit”), ca să nu se repete."""
+
+    __tablename__ = "osm_building"
+    __table_args__ = (UniqueConstraint("lat_key", "lon_key", name="uq_osm_building_location"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    lat_key: Mapped[float] = mapped_column(Float)
+    lon_key: Mapped[float] = mapped_column(Float)
+    osm_id: Mapped[str | None] = mapped_column(String(32))
+    start_date: Mapped[str | None] = mapped_column(String(32))
+    levels: Mapped[str | None] = mapped_column(String(16))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class SummaryLog(Base):
     """Un rezumat zilnic trimis, ca să știm de unde începe următorul și să nu-l repetăm."""
 

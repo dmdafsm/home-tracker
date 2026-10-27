@@ -148,7 +148,9 @@ def test_low_authenticity_blocks_the_instant_alert(setup, tmp_path):
     catalog, notifier, _sessions, run = setup
     strict = PROFILE.model_copy(update={"notify": PROFILE.notify.model_copy(update={"min_authenticity": 100})})
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3, 4, 5], floor=None)]  # scor 95
-    settings = Settings(database_url=f"sqlite:///{tmp_path / 'strict.sqlite'}", data_dir=tmp_path)
+    settings = Settings(
+        database_url=f"sqlite:///{tmp_path / 'strict.sqlite'}", data_dir=tmp_path, osm_lookups_per_run=0
+    )
     sessions = init_db(make_engine(settings.database_url))
     images = {f"https://img.test/{i}.jpg": picture(i) for i in range(1, 20)}
     adapters = {name: make_adapter(name, catalog, {}) for name in catalog}

@@ -52,6 +52,10 @@ class Settings:
     recheck_after_hours: int = 24
     recheck_per_run: int = 10
 
+    # OpenStreetMap (ADR 0005): câte locații noi se interoghează pe rulare (0 = deloc).
+    osm_lookups_per_run: int = 5
+    overpass_url: str = "https://overpass-api.de/api/interpreter"
+
     # Rezumatul zilnic pleacă la prima rulare de după această oră locală.
     summary_hour: int = 20
     timezone: str = "Europe/Bucharest"
@@ -104,5 +108,7 @@ def load_settings() -> Settings:
         recheck_after_hours=_env_int("RECHECK_AFTER_HOURS", 24),
         recheck_per_run=_env_int("RECHECK_PER_RUN", 10),
         summary_hour=_env_int("SUMMARY_HOUR", 20),
+        osm_lookups_per_run=_env_int("OSM_LOOKUPS_PER_RUN", 5),
+        overpass_url=_env("OVERPASS_URL", "https://overpass-api.de/api/interpreter"),
         timezone=_env("TIMEZONE", "Europe/Bucharest"),
     )

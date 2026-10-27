@@ -41,6 +41,11 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
 - **Rezumatul zilnic** pleacă pe email la prima rulare de după ora `SUMMARY_HOUR` (implicit
   20:00): anunțurile noi care trec de filtre dar n-au atins pragul de alertă, cele dispărute
   (posibil vândute), republicările și intervalele în care nu s-a colectat nimic.
+- **Anul construcției** e un interval cu sursa lui: anul din OpenStreetMap pentru clădirea
+  de la coordonatele anunțului (cel mult `OSM_LOOKUPS_PER_RUN` interogări pe rulare, păstrate
+  local), altfel anii declarați în anunțuri (și ale altor apartamente din același bloc), apoi
+  tipologia blocului. Sursa sigură rămâne extrasul CF; vezi
+  [docs/surse-an-constructie.md](docs/surse-an-constructie.md).
 - **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.

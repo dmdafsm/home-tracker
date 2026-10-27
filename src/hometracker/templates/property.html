@@ -39,6 +39,21 @@
   <p class="small muted">Scorul adună semnale, nu dovedește nimic: sună și verifică înainte să decizi.</p>
 </section>
 
+<section>
+  <h2>Anul construcției</h2>
+  {% if year %}
+  <div><strong>{{ year.interval }}</strong> <span class="tag">încredere {{ year.confidence }}</span></div>
+  <ul class="signals small">
+    {% for item in year.evidence %}<li>{{ {"osm": "OpenStreetMap", "declared": "declarat în anunț", "text": "din textul anunțului", "typology": "tipologie"}.get(item.source, item.source) }}: {{ item.detail }} ({{ item.low }}{% if item.high != item.low %}–{{ item.high }}{% endif %})</li>{% endfor %}
+  </ul>
+  {% if year.conflicts %}<p class="small muted">Nu se potrivesc: {% for item in year.conflicts %}{{ item.detail }} ({{ item.low }}{% if item.high != item.low %}–{{ item.high }}{% endif %}){% if not loop.last %}; {% endif %}{% endfor %}</p>{% endif %}
+  {% if year.evidence|selectattr("source", "equalto", "osm")|list %}<p class="small muted">Date OpenStreetMap: © OpenStreetMap contributors (ODbL).</p>{% endif %}
+  {% else %}
+  <p class="small muted">Nu se știe încă: niciun anunț nu declară anul, iar blocul nu are an în OpenStreetMap.</p>
+  {% endif %}
+  <p class="small muted">Pentru apartamentul ales, anul sigur e în extrasul de carte funciară (ANCPI).</p>
+</section>
+
 {% if chart %}
 <section>
   <h2>Istoricul prețului</h2>

@@ -34,7 +34,7 @@
         <span class="score" title="{{ item.result.reasons|join(', ') }}">{{ item.result.score|round|int }}</span>
         <span class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</span>
       </div>
-      <div>{{ floor(item.listing.floor) }}{% if item.listing.area_m2 %} · {{ area(item.listing.area_m2) }}{% endif %}{% if item.listing.rooms %} · {{ item.listing.rooms }} cam.{% endif %}</div>
+      <div>{{ floor(item.listing.floor) }}{% if item.listing.area_m2 %} · {{ area(item.listing.area_m2) }}{% endif %}{% if item.listing.rooms %} · {{ item.listing.rooms }} cam.{% endif %}{% if item.year %} · <span title="{{ item.year.summary }}">bloc {{ item.year.interval }}</span>{% endif %}</div>
       <div class="small">{{ item.listing.title|truncate(80) }}</div>
       <div class="small muted">
         {{ plural(h.listings|length, "anunț", "anunțuri") }} · {{ item.platforms|join(', ') }} · {{ plural(h.days_on_market(now), "zi", "zile") }} pe piață

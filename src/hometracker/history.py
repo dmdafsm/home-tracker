@@ -117,7 +117,7 @@ def publisher_label(listing: Listing) -> str:
     return f"{label} ({listing.publisher_name})" if listing.publisher_name else label
 
 
-def format_history(history: PropertyHistory, settings: Settings, now: datetime | None = None) -> str:
+def format_history(history: PropertyHistory, settings: Settings, now: datetime | None = None, year=None) -> str:
     zone = ZoneInfo(settings.timezone)
 
     def day(value: datetime | None) -> str:
@@ -142,6 +142,8 @@ def format_history(history: PropertyHistory, settings: Settings, now: datetime |
     lines.append(
         f"{len(history.listings)} anunțuri, {len(history.active)} active, {len(history.republications)} republicări"
     )
+    if year is not None:
+        lines.append(f"Anul construcției: {year.summary} (încredere {year.confidence})")
 
     lines.append("\nAnunțuri:")
     for listing in history.listings:

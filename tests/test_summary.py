@@ -18,7 +18,7 @@ STRICT = PROFILE.model_copy(update={"notify": PROFILE.notify.model_copy(update={
 
 @pytest.fixture
 def db(tmp_path):
-    settings = Settings(database_url=f"sqlite:///{tmp_path / 'db.sqlite'}", data_dir=tmp_path)
+    settings = Settings(database_url=f"sqlite:///{tmp_path / 'db.sqlite'}", data_dir=tmp_path, osm_lookups_per_run=0)
     return settings, init_db(make_engine(settings.database_url))
 
 

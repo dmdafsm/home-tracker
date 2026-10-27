@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from sqlalchemy import select
 
 from .adapters import ADAPTERS
+from .buildyear import estimate_for
 from .config import Settings, load_settings
 from .history import find_property_id, format_history, property_history
 from .http import PoliteClient
@@ -128,7 +129,7 @@ def cmd_property(args: argparse.Namespace) -> None:
         history = property_history(session, property_id) if property_id is not None else None
         if history is None:
             sys.exit(f"nu am găsit apartamentul {args.reference}")
-        print(format_history(history, settings))
+        print(format_history(history, settings, year=estimate_for(session, history.listings)))
 
 
 def cmd_web(args: argparse.Namespace) -> None:
