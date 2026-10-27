@@ -3,11 +3,16 @@
 {% set range = history.price_range() %}
 {% block title %}Apartamentul {{ history.property_id }} · home-tracker{% endblock %}
 {% block header %}
-  <span class="muted">Apartamentul {{ history.property_id }}</span>
+  <div class="subtitle small">Apartamentul {{ history.property_id }}</div>
 {% endblock %}
 {% block content %}
+{% if photos %}
+<div class="carousel large" aria-label="Poze ({{ photos|length }})">
+  {% for photo in photos %}<div class="slide"><img src="/photo/{{ photo.id }}" alt="Poza {{ loop.index }} din {{ loop.length }}" loading="{{ 'eager' if loop.first else 'lazy' }}"><span class="count">{{ loop.index }} / {{ loop.length }}</span></div>{% endfor %}
+</div>
+{% endif %}
 <section>
-  <h2>{{ first.title }}</h2>
+  <h1 class="title-large" style="margin-bottom: 8px">{{ first.title }}</h1>
   <div class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</div>
   <div>{{ floor(first.floor) }}{% if first.area_m2 %} · {{ area(first.area_m2) }}{% endif %}{% if first.rooms %} · {{ first.rooms }} cam.{% endif %}</div>
   <p class="small muted">
@@ -17,11 +22,14 @@
   </p>
   {% if not history.active %}<span class="tag bad">nu mai e activ pe nicio platformă</span>{% endif %}
   {% set base = "/property/" ~ history.property_id ~ "/label/" %}
+  {% set cheapest = (history.active or history.listings)|selectattr("price_eur")|sort(attribute="price_eur")|first %}
+  {% set link = safe_url(cheapest.url) if cheapest else none %}
   <div class="actions">
-    <form class="inline" method="post" action="{{ base }}{{ 'unsave' if label.saved else 'save' }}"><button class="{{ 'on' if label.saved }}">{{ "salvat ✓" if label.saved else "salvează" }}</button></form>
-    <form class="inline" method="post" action="{{ base }}{{ 'unhide' if label.hidden else 'hide' }}"><button class="{{ 'on' if label.hidden }}">{{ "ascuns ✓" if label.hidden else "ascunde" }}</button></form>
-    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'real' else 'real' }}"><button class="{{ 'on' if label.verdict == 'real' }}">confirmat real{{ " ✓" if label.verdict == "real" }}</button></form>
-    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'fake' else 'fake' }}"><button class="{{ 'on' if label.verdict == 'fake' }}">fals{{ " ✓" if label.verdict == "fake" }}</button></form>
+    {% if link %}<a class="btn filled" href="{{ link }}" rel="noopener noreferrer" target="_blank"><span class="icon" aria-hidden="true">open_in_new</span>Anunțul cel mai ieftin ({{ platform(cheapest.platform) }})</a>{% endif %}
+    <form class="inline" method="post" action="{{ base }}{{ 'unsave' if label.saved else 'save' }}"><button class="{{ 'on' if label.saved }}" aria-pressed="{{ 'true' if label.saved else 'false' }}"><span class="icon {{ 'fill' if label.saved }}" aria-hidden="true">bookmark</span>{{ "salvat" if label.saved else "salvează" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'unhide' if label.hidden else 'hide' }}"><button class="{{ 'on' if label.hidden }}" aria-pressed="{{ 'true' if label.hidden else 'false' }}"><span class="icon" aria-hidden="true">visibility_off</span>{{ "ascuns" if label.hidden else "ascunde" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'real' else 'real' }}"><button class="{{ 'on' if label.verdict == 'real' }}" aria-pressed="{{ 'true' if label.verdict == 'real' else 'false' }}">{% if label.verdict == "real" %}<span class="icon" aria-hidden="true">check</span>{% endif %}confirmat real</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'fake' else 'fake' }}"><button class="{{ 'on' if label.verdict == 'fake' }}" aria-pressed="{{ 'true' if label.verdict == 'fake' else 'false' }}">{% if label.verdict == "fake" %}<span class="icon" aria-hidden="true">check</span>{% endif %}fals</button></form>
   </div>
 </section>
 
@@ -55,7 +63,7 @@
 </section>
 
 {% if duplicates %}
-<section>
+<section id="duplicate">
   <h2>Posibil același apartament</h2>
   <p class="small muted">
     Apartamente pe care gruparea automată nu le-a unit (fără poze comune, de obicei agenții care au
@@ -69,8 +77,8 @@
       <a href="/property/{{ d.property_id }}">Apartamentul {{ d.property_id }}</a>:
       {{ platform(d.listing.platform) }}, {{ publisher(d.listing) }} · <span class="muted">{{ d.reasons|join(" · ") }}</span>
       <div class="actions">
-        <form class="inline" method="post" action="/property/{{ history.property_id }}/merge/{{ d.property_id }}"><button>e același apartament</button></form>
-        <form class="inline" method="post" action="/property/{{ history.property_id }}/distinct/{{ d.property_id }}"><button>nu e același</button></form>
+        <form class="inline" method="post" action="/property/{{ history.property_id }}/merge/{{ d.property_id }}"><button class="tonal"><span class="icon" aria-hidden="true">merge</span>e același apartament</button></form>
+        <form class="inline" method="post" action="/property/{{ history.property_id }}/distinct/{{ d.property_id }}"><button class="text"><span class="icon" aria-hidden="true">close</span>nu e același</button></form>
       </div>
     </li>
   {% endfor %}
@@ -102,7 +110,7 @@
           {% if listing.active %}<span class="tag good">activ</span>{% else %}<span class="tag bad">dispărut {{ day(listing.removed_at) }}</span>{% endif %}
           {% if listing.republished_from_id %}<span class="tag warn">republicare a #{{ listing.republished_from_id }}</span>{% endif %}
           {% set why = match_label(listing) %}{% if why %}<div class="muted">{{ why }}</div>{% endif %}
-          {% if history.listings|length > 1 %}<form class="inline" method="post" action="/listing/{{ listing.id }}/split"><button title="mută anunțul într-un apartament separat">nu e același apartament</button></form>{% endif %}
+          {% if history.listings|length > 1 %}<form class="inline" method="post" action="/listing/{{ listing.id }}/split"><button class="text" title="mută anunțul într-un apartament separat"><span class="icon" aria-hidden="true">call_split</span>nu e același apartament</button></form>{% endif %}
         </td>
       </tr>
     {% endfor %}
@@ -123,15 +131,6 @@
     {% endfor %}
     </tbody>
   </table>
-  </div>
-</section>
-{% endif %}
-
-{% if photos %}
-<section>
-  <h2>Poze ({{ photos|length }})</h2>
-  <div class="gallery">
-    {% for photo in photos %}<img src="/photo/{{ photo.id }}" alt="" loading="lazy">{% endfor %}
   </div>
 </section>
 {% endif %}

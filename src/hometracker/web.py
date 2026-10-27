@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -16,17 +15,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
 from . import profile_editor
-from .authenticity import Assessment, Context, assess
-from .buildyear import YearEstimate, estimate_for
+from .authenticity import Context, assess
+from .buildyear import estimate_for
 from .config import Settings
+from .feed import PUBLISHERS, ROOMS, SORTS, FeedFilters, feed
 from .formatting import PLATFORM_NAMES, floor_label, format_price
 from .history import PropertyHistory, match_label, property_history, publisher_label
-from .labels import ACTIONS, apply_label, label_for, labels_for, split_listing
-from .merge import Suggestion, mark_distinct, merge_properties, possible_duplicates
-from .models import Listing, Photo, PropertyLabel, as_utc, init_db, make_engine, utcnow
+from .labels import ACTIONS, apply_label, label_for, split_listing
+from .merge import mark_distinct, merge_properties, possible_duplicates
+from .models import Photo, as_utc, init_db, make_engine, utcnow
 from .photos import image_path
-from .pipeline import listing_to_data
-from .profiles import MatchResult, Profile, load_profiles, match
+from .profiles import Profile, load_profiles
 from .publishers import DISGUISED_AGENT_PROPERTIES, publisher_stats
 from .status import collection_status
 
@@ -38,70 +37,11 @@ def safe_url(url: str | None) -> str | None:
     return url if url and urlsplit(url).scheme in ("http", "https") else None
 
 
-@dataclass
-class FeedItem:
-    history: PropertyHistory
-    listing: Listing  # anunțul cu scorul cel mai bun pentru profil
-    result: MatchResult
-    photo_id: int | None
-    assessment: Assessment
-    label: PropertyLabel | None
-    year: YearEstimate | None
-    duplicates: list[Suggestion] = field(default_factory=list)
-
-    @property
-    def platforms(self) -> list[str]:
-        return sorted({PLATFORM_NAMES.get(item.platform, item.platform) for item in self.history.listings})
-
-
-def feed(
-    session, profile: Profile, *, include_removed: bool = False, include_hidden: bool = False, only_saved: bool = False
-) -> list[FeedItem]:
-    """Apartamentele cu cel puțin un anunț care trece de filtrele profilului, după scor."""
-    property_ids = session.scalars(select(Listing.property_id).where(Listing.property_id.is_not(None)).distinct())
-    context = Context.build(session)
-    ids = property_ids.all()
-    labels = labels_for(session, ids)
-    duplicates = possible_duplicates(session)
-    items = []
-    for property_id in ids:
-        label = labels.get(property_id)
-        if label and label.hidden and not include_hidden:
-            continue
-        if only_saved and not (label and label.saved):
-            continue
-        history = property_history(session, property_id)
-        if history is None or (not history.active and not include_removed):
-            continue
-        candidates = history.active or history.listings
-        scored = [(listing, match(profile, listing_to_data(listing))) for listing in candidates]
-        scored = [(listing, result) for listing, result in scored if result.passed]
-        if not scored:
-            continue
-        listing, result = max(scored, key=lambda pair: pair[1].score)
-        items.append(
-            FeedItem(
-                history,
-                listing,
-                result,
-                _first_photo_id(session, history),
-                assess(history, context),
-                label,
-                estimate_for(session, history.listings),
-                duplicates.get(property_id, []),
-            )
-        )
-    items.sort(key=lambda item: (-item.result.score, -as_utc(item.history.listings[-1].first_seen).timestamp()))
-    return items
-
-
-def _first_photo_id(session, history: PropertyHistory) -> int | None:
-    return session.scalar(
-        select(Photo.id)
-        .where(Photo.listing_id.in_([listing.id for listing in history.listings]), Photo.path.is_not(None))
-        .order_by(Photo.listing_id, Photo.position)
-        .limit(1)
-    )
+def back_to(target: str | None, default: str) -> str:
+    """Pagina la care se întoarce un buton: doar o cale din aplicație, niciodată alt site."""
+    if target and target.startswith("/") and not target.startswith(("//", "/\\")):
+        return target
+    return default
 
 
 def plural(count: int, one: str, many: str) -> str:
@@ -193,15 +133,14 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
         return {"ok": True}
 
     @app.get("/", response_class=HTMLResponse)
-    def index(
-        request: Request, profile: str | None = None, removed: bool = False, hidden: bool = False, saved: bool = False
-    ):
+    def index(request: Request, profile: str | None = None):
         available = profiles()
         if not available:
             raise HTTPException(404, "niciun profil activ")
         selected = next((p for p in available if p.name == profile), available[0])
+        filters = FeedFilters.from_query(request.query_params, request.query_params.getlist)
         with sessions() as session:
-            items = feed(session, selected, include_removed=removed, include_hidden=hidden, only_saved=saved)
+            items = feed(session, selected, filters)
             return TEMPLATES.TemplateResponse(
                 request,
                 "feed.html",
@@ -209,9 +148,14 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                     "profiles": available,
                     "profile": selected,
                     "items": items,
-                    "removed": removed,
-                    "hidden": hidden,
-                    "saved": saved,
+                    "filters": filters,
+                    "here": request.url.path + ("?" + request.url.query if request.url.query else ""),
+                    "sorts": SORTS,
+                    "room_options": ROOMS,
+                    "publisher_options": PUBLISHERS,
+                    "platform_options": sorted(
+                        {name for p in available for name, source in p.sources.items() if source.enabled}
+                    ),
                     "problems": [s for s in collection_status(session, available, settings) if s.problem],
                     "now": utcnow(),
                 },
@@ -258,7 +202,7 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
             raise HTTPException(403, "cerere din afara aplicației")
 
     @app.post("/property/{property_id}/label/{action}")
-    def label_property(request: Request, property_id: int, action: str):
+    def label_property(request: Request, property_id: int, action: str, next: str | None = None):
         require_same_origin(request)
         if action not in ACTIONS:
             raise HTTPException(400, "acțiune necunoscută")
@@ -268,7 +212,7 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
             except LookupError:
                 raise HTTPException(404, "apartament inexistent") from None
             session.commit()
-        return RedirectResponse(f"/property/{property_id}", status_code=303)
+        return RedirectResponse(back_to(next, f"/property/{property_id}"), status_code=303)
 
     @app.post("/listing/{listing_id}/split")
     def split(request: Request, listing_id: int):

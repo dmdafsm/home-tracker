@@ -96,7 +96,13 @@ def test_label_buttons_require_same_origin(web):
     assert client.post(f"/property/{property_id}/label/delete", headers=SAME_ORIGIN).status_code == 400
     assert client.post("/property/999/label/save", headers=SAME_ORIGIN).status_code == 404
     page = client.get(f"/property/{property_id}")
-    assert "salvat ✓" in page.text and f'action="/property/{property_id}/label/unsave"' in page.text
+    assert 'aria-pressed="true"' in page.text and f'action="/property/{property_id}/label/unsave"' in page.text
+    # Butoanele de pe card se întorc în feed, cu aceleași filtre; doar căi din aplicație.
+    back = client.post(f"{url}?next=/%3Fsort%3Dprice_asc", headers=SAME_ORIGIN, follow_redirects=False)
+    assert back.headers["location"] == "/?sort=price_asc"
+    for target in ("https://evil.test/", "//evil.test/", "/\\evil.test"):
+        away = client.post(url, params={"next": target}, headers=SAME_ORIGIN, follow_redirects=False)
+        assert away.headers["location"] == f"/property/{property_id}"
 
 
 def test_feed_filters_saved_and_hidden(web):

@@ -1,66 +1,155 @@
 {% extends "base.html" %}
 {% block title %}{{ profile.name }} · home-tracker{% endblock %}
 {% block header %}
-  <span class="muted">{{ profile.description or profile.name }}</span>
+  <div class="subtitle small">{{ profile.description or profile.name }}</div>
+{% endblock %}
+{% block style %}
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 16px; }
+    .toolbar .count { margin-right: auto; }
+    details.filters { background: var(--surface-container-low); border-radius: 12px; margin-bottom: 16px; }
+    details.filters > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px;
+                                height: 48px; padding: 0 16px; font-weight: 500; }
+    details.filters > summary::-webkit-details-marker { display: none; }
+    details.filters > summary .badge { background: var(--primary); color: var(--on-primary); border-radius: 8px;
+                                       min-width: 16px; height: 16px; padding: 0 4px; font-size: 11px; line-height: 16px; text-align: center; }
+    details.filters form { padding: 0 16px 16px; display: grid; gap: 16px; }
+    .fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+    .fields .wide { grid-column: span 2; }
+    @media (max-width: 400px) { .fields .wide { grid-column: auto; } }
+    fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+    legend { font-size: 12px; font-weight: 500; color: var(--on-surface-variant); padding: 0; margin-bottom: 8px; }
+    .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+    @media (max-width: 360px) { .cards { grid-template-columns: 1fr; } }
+    .card { scroll-margin-top: 96px; background: var(--surface-container-low); border-radius: 12px; overflow: hidden; display: flex;
+            flex-direction: column; box-shadow: var(--shadow-1); }
+    .card .media { position: relative; }
+    .card .media .score { position: absolute; left: 8px; top: 8px; z-index: 1; background: var(--surface-container-lowest);
+                          color: var(--on-surface); }
+    .card .body { padding: 12px 16px 0; display: grid; gap: 6px; flex: 1; align-content: start; }
+    .card .title-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card .body a.title-link { color: inherit; }
+    .card .actions { padding: 4px 8px 12px 16px; margin-top: 8px; }
+    .card .actions .spacer { flex: 1; }
 {% endblock %}
 {% block content %}
 {% if problems %}
-<p class="banner">
-  Colectarea are probleme pe {% for s in problems %}{{ platform(s.platform) }}{% if not loop.last %}, {% endif %}{% endfor %}:
-  feed-ul poate fi incomplet. <a href="/status">Vezi starea colectării</a>.
-</p>
-{% endif %}
-<div class="filters small">
-  {% if profiles|length > 1 %}
-    <span>Profil:
-      {% for p in profiles %}
-        {% if p.name == profile.name %}<strong>{{ p.name }}</strong>{% else %}<a href="/?profile={{ p.name|urlencode }}">{{ p.name }}</a>{% endif %}
-      {% endfor %}
-    </span>
-  {% endif %}
-  <span>{{ plural(items|length, "apartament", "apartamente") }}</span>
-  {% set base = "/?profile=" ~ (profile.name|urlencode) %}
-  {% if saved %}<a href="{{ base }}">toate</a>{% else %}<a href="{{ base }}&amp;saved=1">doar salvate</a>{% endif %}
-  {% if removed %}<a href="{{ base }}">doar active</a>{% else %}<a href="{{ base }}&amp;removed=1">include dispărute</a>{% endif %}
-  {% if hidden %}<a href="{{ base }}">fără ascunse</a>{% else %}<a href="{{ base }}&amp;hidden=1">include ascunse</a>{% endif %}
+<div class="banner" role="status">
+  <span class="icon" aria-hidden="true">warning</span>
+  <div>Colectarea are probleme pe {% for s in problems %}{{ platform(s.platform) }}{% if not loop.last %}, {% endif %}{% endfor %}:
+  feed-ul poate fi incomplet. <a href="/status">Vezi starea colectării</a>.</div>
 </div>
+{% endif %}
+
+{% if profiles|length > 1 %}
+<div class="chips" style="margin-bottom: 12px" aria-label="Profil">
+  {% for p in profiles %}<a class="chip" href="/?{{ filters.query(p.name) }}" {% if p.name == profile.name %}aria-current="true"{% endif %}>{{ p.name }}</a>{% endfor %}
+</div>
+{% endif %}
+
+<details class="filters" {% if filters.active_count or filters.hidden or filters.removed %}open{% endif %}>
+  <summary><span class="icon" aria-hidden="true">filter_list</span>Filtre și sortare
+    {% if filters.active_count %}<span class="badge">{{ filters.active_count }}</span>{% endif %}</summary>
+  <form method="get" action="/">
+    <input type="hidden" name="profile" value="{{ profile.name }}">
+    <div class="fields">
+      <label class="field wide"><span>Caută în titlu, zonă și descriere</span>
+        <input type="search" name="q" value="{{ filters.q }}" placeholder="de exemplu: balcon, Hermes, centrală"></label>
+      <label class="field"><span>Preț minim (€)</span>
+        <input type="number" name="price_min" min="0" step="1000" inputmode="numeric" value="{{ filters.price_min if filters.price_min is not none }}"></label>
+      <label class="field"><span>Preț maxim (€)</span>
+        <input type="number" name="price_max" min="0" step="1000" inputmode="numeric" value="{{ filters.price_max if filters.price_max is not none }}"></label>
+      <label class="field"><span>Suprafață minimă (mp)</span>
+        <input type="number" name="area_min" min="0" step="1" inputmode="numeric" value="{{ filters.area_min if filters.area_min is not none }}"></label>
+      <label class="field"><span>Ordonează după</span>
+        <select name="sort">
+          {% for key, name in sorts.items() %}<option value="{{ key }}" {% if filters.sort == key %}selected{% endif %}>{{ name }}</option>{% endfor %}
+        </select></label>
+    </div>
+    <fieldset><legend>Camere</legend><div class="chips">
+      {% for r in room_options %}<label class="chip"><input type="checkbox" name="rooms" value="{{ r }}" {% if r in filters.rooms %}checked{% endif %}>{{ r }}{% if r == "4" %}+{% endif %} {{ "cameră" if r == "1" else "camere" }}</label>{% endfor %}
+    </div></fieldset>
+    <fieldset><legend>Platforme</legend><div class="chips">
+      {% for name in platform_options %}<label class="chip"><input type="checkbox" name="platform" value="{{ name }}" {% if name in filters.platforms %}checked{% endif %}>{{ platform(name) }}</label>{% endfor %}
+    </div></fieldset>
+    <fieldset><legend>Publicat de</legend><div class="chips">
+      <label class="chip"><input type="radio" name="publisher" value="" {% if not filters.publisher %}checked{% endif %}>oricine</label>
+      {% for key, name in publisher_options.items() %}<label class="chip"><input type="radio" name="publisher" value="{{ key }}" {% if filters.publisher == key %}checked{% endif %}>{{ name }}</label>{% endfor %}
+    </div></fieldset>
+    <fieldset><legend>Arată</legend><div class="chips">
+      <label class="chip"><input type="checkbox" name="saved" value="1" {% if filters.saved %}checked{% endif %}>doar salvate</label>
+      <label class="chip"><input type="checkbox" name="hidden" value="1" {% if filters.hidden %}checked{% endif %}>și ascunse</label>
+      <label class="chip"><input type="checkbox" name="removed" value="1" {% if filters.removed %}checked{% endif %}>și dispărute</label>
+    </div></fieldset>
+    <div class="actions" style="margin-top: 0">
+      <button class="filled" type="submit"><span class="icon" aria-hidden="true">search</span>Aplică</button>
+      <a class="btn text" href="/?profile={{ profile.name|urlencode }}">Șterge filtrele</a>
+    </div>
+  </form>
+</details>
+
+<div class="toolbar">
+  <span class="count title">{{ plural(items|length, "apartament", "apartamente") }}</span>
+  <span class="icon muted" aria-hidden="true">sort</span>
+  <div class="chips" aria-label="Ordonare">
+    {% for key in ("score", "newest", "price_asc", "price_m2") %}<a class="chip" href="/?{{ filters.query(profile.name, sort=key) }}" {% if filters.sort == key %}aria-current="true"{% endif %}>{{ sorts[key] }}</a>{% endfor %}
+  </div>
+</div>
+
 {% if items %}
 <div class="cards">
   {% for item in items %}
   {% set h = item.history %}
   {% set range = h.price_range() %}
-  <a class="card" href="/property/{{ h.property_id }}">
-    {% if item.photo_id %}
-      <img src="/photo/{{ item.photo_id }}" alt="" loading="lazy">
-    {% else %}
-      <div class="noimg">fără poză</div>
-    {% endif %}
-    <div class="body">
-      <div>
-        <span class="score" title="{{ item.result.reasons|join(', ') }}">{{ item.result.score|round|int }}</span>
-        <span class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</span>
+  {% set detail = "/property/" ~ h.property_id %}
+  {% set base = detail ~ "/label/" %}
+  {% set back = "?next=" ~ ((here ~ "#p" ~ h.property_id)|urlencode) %}
+  {% set link = safe_url(item.cheapest.url) %}
+  <article class="card" id="p{{ h.property_id }}">
+    <div class="media">
+      <span class="tag score" title="potrivire cu profilul: {{ item.result.reasons|join(', ') }}">potrivire {{ item.result.score|round|int }}</span>
+      <div class="carousel" aria-label="Poze">
+        {% for photo_id in item.photo_ids %}
+        <div class="slide"><img src="/photo/{{ photo_id }}" alt="Poza {{ loop.index }} din {{ loop.length }}" loading="lazy">
+          <span class="count">{{ loop.index }} / {{ loop.length }}</span></div>
+        {% else %}
+        <div class="none"><span class="icon" aria-hidden="true">image_not_supported</span><span class="small">fără poze descărcate</span></div>
+        {% endfor %}
       </div>
-      <div>{{ floor(item.listing.floor) }}{% if item.listing.area_m2 %} · {{ area(item.listing.area_m2) }}{% endif %}{% if item.listing.rooms %} · {{ item.listing.rooms }} cam.{% endif %}{% if item.year %} · <span title="{{ item.year.summary }}">bloc {{ item.year.interval }}</span>{% endif %}</div>
-      <div class="small">{{ item.listing.title|truncate(80) }}</div>
+    </div>
+    <div class="body">
+      <div class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</div>
+      <div>{{ floor(item.listing.floor) }}{% if item.listing.area_m2 %} · {{ area(item.listing.area_m2) }}{% endif %}{% if item.listing.rooms %} · {{ item.listing.rooms }} cam.{% endif %}{% if item.price_per_m2 %} · {{ price(item.price_per_m2) }}/mp{% endif %}{% if item.year %} · <span title="{{ item.year.summary }}">bloc {{ item.year.interval }}</span>{% endif %}</div>
+      <a class="title-link" href="{{ detail }}"><div class="title-line">{{ item.listing.title }}</div></a>
       <div class="small muted">
         {{ plural(h.listings|length, "anunț", "anunțuri") }} · {{ item.platforms|join(', ') }} · {{ plural(h.days_on_market(now), "zi", "zile") }} pe piață
       </div>
-      <div>
+      <div class="tags">
+        {% set a = item.assessment %}
+        <span class="tag {{ 'good' if a.score >= 70 else ('warn' if a.score >= 40 else 'bad') }}" title="{% for s in a.signals %}{{ s.label }}: {{ s.detail }}{% if not loop.last %}; {% endif %}{% endfor %}"><span class="icon" aria-hidden="true">verified</span>autenticitate {{ a.score }}</span>
         {% if not h.active %}<span class="tag bad">dispărut</span>{% endif %}
         {% if h.republications %}<span class="tag warn">{{ plural(h.republications|length, "republicare", "republicări") }}</span>{% endif %}
-        {% if item.duplicates %}<span class="tag warn" title="{% for d in item.duplicates %}apartamentul {{ d.property_id }}: {{ d.reasons|join(', ') }}{% if not loop.last %}; {% endif %}{% endfor %}">{{ "posibil același cu " ~ (item.duplicates|length) ~ " " ~ ("apartament" if item.duplicates|length == 1 else "apartamente") }}</span>{% endif %}
-        {% if item.label and item.label.saved %}<span class="tag good">salvat</span>{% endif %}
-        {% if item.label and item.label.hidden %}<span class="tag">ascuns</span>{% endif %}
+        {% if item.duplicates %}<a class="tag info" href="{{ detail }}#duplicate" title="{% for d in item.duplicates %}apartamentul {{ d.property_id }}: {{ d.reasons|join(', ') }}{% if not loop.last %}; {% endif %}{% endfor %}"><span class="icon" aria-hidden="true">merge</span>posibil același cu {{ item.duplicates|length }}</a>{% endif %}
         {% if item.label and item.label.verdict == "real" %}<span class="tag good">confirmat real</span>{% endif %}
         {% if item.label and item.label.verdict == "fake" %}<span class="tag bad">fals</span>{% endif %}
-        {% set a = item.assessment %}
-        <span class="tag trust {{ 'high' if a.score >= 70 else ('mid' if a.score >= 40 else 'low') }}" title="{% for s in a.signals %}{{ s.label }}: {{ s.detail }}{% if not loop.last %}; {% endif %}{% endfor %}">autenticitate {{ a.score }}</span>
+        {% if item.label and item.label.hidden %}<span class="tag">ascuns</span>{% endif %}
       </div>
     </div>
-  </a>
+    <div class="actions">
+      <a class="btn tonal" href="{{ detail }}">Detalii</a>
+      {% if link %}<a class="btn text" href="{{ link }}" rel="noopener noreferrer" target="_blank" title="{{ platform(item.cheapest.platform) }}, {{ price(item.cheapest.price_eur) }}"><span class="icon" aria-hidden="true">open_in_new</span>Anunț</a>{% endif %}
+      <span class="spacer"></span>
+      {% set saved = item.label and item.label.saved %}
+      <form class="inline" method="post" action="{{ base }}{{ 'unsave' if saved else 'save' }}{{ back }}"><button class="icon-btn {{ 'on' if saved }}" title="{{ 'scoate din salvate' if saved else 'salvează' }}" aria-label="{{ 'scoate din salvate' if saved else 'salvează' }}" aria-pressed="{{ 'true' if saved else 'false' }}"><span class="icon" aria-hidden="true">bookmark</span></button></form>
+      {% set hidden = item.label and item.label.hidden %}
+      <form class="inline" method="post" action="{{ base }}{{ 'unhide' if hidden else 'hide' }}{{ back }}"><button class="icon-btn {{ 'on' if hidden }}" title="{{ 'arată din nou' if hidden else 'ascunde' }}" aria-label="{{ 'arată din nou' if hidden else 'ascunde' }}" aria-pressed="{{ 'true' if hidden else 'false' }}"><span class="icon" aria-hidden="true">{{ 'visibility' if hidden else 'visibility_off' }}</span></button></form>
+    </div>
+  </article>
   {% endfor %}
 </div>
 {% else %}
-<div class="empty">Niciun apartament care să treacă de filtrele profilului, deocamdată.</div>
+<div class="empty">
+  {% if filters.active_count %}Niciun apartament nu trece de filtrele alese. <a href="/?profile={{ profile.name|urlencode }}">Șterge filtrele</a>.
+  {% else %}Niciun apartament care să treacă de filtrele profilului, deocamdată.{% endif %}
+</div>
 {% endif %}
 {% endblock %}

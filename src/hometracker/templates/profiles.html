@@ -24,7 +24,7 @@
         {% else %}
         <td colspan="2"><span class="tag bad">invalid</span> <span class="small error">{{ f.error }}</span></td>
         {% endif %}
-        <td class="nowrap small"><a href="/profiles/new?source={{ f.name }}">profil nou din acesta</a></td>
+        <td class="nowrap"><a class="btn text" href="/profiles/{{ f.name }}"><span class="icon" aria-hidden="true">edit</span>editează</a> <a class="btn text" href="/profiles/new?source={{ f.name }}"><span class="icon" aria-hidden="true">content_copy</span>copiază</a></td>
       </tr>
     {% endfor %}
     </tbody>
@@ -33,6 +33,6 @@
   {% else %}
   <p class="empty">Niciun profil încă.</p>
   {% endif %}
-  <div class="actions"><a href="/profiles/new">Profil nou, gol</a></div>
+  <div class="actions"><a class="btn tonal" href="/profiles/new">Profil nou, gol</a></div>
 </section>
 {% endblock %}

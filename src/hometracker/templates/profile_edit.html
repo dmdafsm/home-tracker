@@ -19,9 +19,9 @@
   <form method="post" action="{{ '/profiles/' ~ original.name if original else '/profiles/new' }}">
     <textarea class="yaml" name="text" spellcheck="false" aria-label="Profil YAML">{{ text }}</textarea>
     <div class="actions">
-      <button type="submit" name="action" value="preview">Verifică</button>
-      <button type="submit" name="action" value="save" class="on">Salvează</button>
-      <a class="small" href="/profiles">Renunță</a>
+      <button type="submit" name="action" value="preview"><span class="icon" aria-hidden="true">check</span>Verifică</button>
+      <button type="submit" name="action" value="save" class="filled">Salvează</button>
+      <a class="btn text" href="/profiles">Renunță</a>
     </div>
   </form>
 </section>
