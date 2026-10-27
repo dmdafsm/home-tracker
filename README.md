@@ -124,6 +124,13 @@ dintr-un anunț dispărut, republicări luni de zile la același preț, detalii 
 dovedește nimic; arată ce merită verificat la telefon. În profil, `notify.min_authenticity`
 poate opri alertele instant sub un prag.
 
+Pagina **Profiluri** editează profilurile (fișierele din `profiles/`) ca text YAML, cu
+comentariile păstrate: **Verifică** validează și arată câte apartamente deja grupate ar trece de
+filtre, **Salvează** scrie fișierul (versiunea veche rămâne în `profiles/.history/`). Un profil
+nou pornește dintr-o copie a unuia existent. Numele nu se schimbă la editare, pentru că alertele
+trimise sunt ținute pe nume. Worker-ul citește profilurile la fiecare rulare. Profilurile noi nu
+intră în git (pot avea adrese de email); în repo rămâne doar exemplul.
+
 Pagina **Publicatori** arată, pentru fiecare agenție sau proprietar, câte anunțuri active are, câte
 apartamente, ce procent a preluat de la alții (apartamentul apăruse întâi la alt publicator) și
 cu cât e în medie mai scump sau mai ieftin decât ceilalți pentru aceleași apartamente. Un

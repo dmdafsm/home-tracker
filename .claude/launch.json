@@ -10,7 +10,7 @@
     {
       "name": "web-demo",
       "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "DATA_DIR=data/demo uv run hometracker web --port 8081"],
+      "runtimeArgs": ["-c", "DATA_DIR=data/demo PROFILES_DIR=data/demo/profiles uv run hometracker web --port 8081"],
       "port": 8081
     }
   ]

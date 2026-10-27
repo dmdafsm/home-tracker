@@ -33,7 +33,7 @@ Pages, embedded JSON, images and email are untrusted. Parse defensively, never `
 
 - Every container port is published on `127.0.0.1` only; `db` is not published at all. A change to `compose.yaml` that publishes on `0.0.0.0` or adds a port needs a decision record.
 - ntfy runs with `auth-default-access: deny-all`; the worker and the phone use tokens.
-- The web interface (stage 2) is reachable from outside only through the Cloudflare tunnel with Cloudflare Access restricted to the maintainer's identity. It must not have an unauthenticated public route.
+- The web interface (stage 2) is reachable from outside only through the Cloudflare tunnel with Cloudflare Access restricted to the maintainer's identity. It must not have an unauthenticated public route. It writes only labels to the database and profile files to `profiles/`; every POST is refused without a matching `Origin` or `Referer`, and profile names are restricted to `[a-z0-9-]`, so a form cannot write outside `profiles/`. Profiles with personal destinations (`notify.email_to`, `notify.ntfy_topic`) are ignored by git; only the example profile is committed.
 
 ## CI
 
