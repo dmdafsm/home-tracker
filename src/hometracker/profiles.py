@@ -52,6 +52,8 @@ class NotifySettings(BaseModel):
     min_score: float = 60
     price_drop_percent: float = 3
     channels: list[str] = Field(default_factory=lambda: ["ntfy"])
+    # Rezumatul zilnic; o listă goală îl dezactivează.
+    summary_channels: list[str] = Field(default_factory=lambda: ["email"])
 
 
 class Source(BaseModel):

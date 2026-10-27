@@ -33,6 +33,9 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
   căutare sunt redeschise o dată la 24 de ore (cel mult `RECHECK_PER_RUN` pe rulare). O
   scădere de preț găsită așa trimite alerta obișnuită; un anunț șters (404/410) e marcat ca
   dispărut.
+- **Rezumatul zilnic** pleacă pe email la prima rulare de după ora `SUMMARY_HOUR` (implicit
+  20:00): anunțurile noi care trec de filtre dar n-au atins pragul de alertă, cele dispărute
+  (posibil vândute) și intervalele în care nu s-a colectat nimic.
 - **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.
@@ -98,6 +101,7 @@ docker compose logs -f worker                       # ce face acum
 docker compose exec worker hometracker run          # o rulare imediată
 docker compose exec worker hometracker run --catchup
 docker compose exec worker hometracker matches      # ultimele alerte
+docker compose exec worker hometracker summary --print   # rezumatul ultimelor 24 de ore, fără trimitere
 docker compose exec worker hometracker dump "<url>" # verifică ce extrage un adapter
 ```
 
