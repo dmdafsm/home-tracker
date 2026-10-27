@@ -22,7 +22,7 @@ One package, `src/hometracker`. Adapters live in `hometracker/adapters/` (one mo
 
 - Models live in `models.py` (SQLAlchemy 2.0 typed mappings). Code must run on PostgreSQL (Docker) and SQLite (tests, local runs) until a decision record says otherwise.
 - Use the ORM or SQLAlchemy Core expressions; never format values into SQL strings.
-- Schema changes are additive and must work on an existing database: `create_all` adds new tables but not new columns, so a new column comes with an idempotent startup migration (see [architecture](../architecture.md#schema-evolution)).
+- Schema changes are additive and must work on an existing database: new tables come from `create_all`, new nullable columns from `models.add_missing_columns` at startup; anything else needs an explicit migration (see [architecture](../architecture.md#schema-evolution)). Add a test that upgrades an existing database (see `tests/test_recheck.py`).
 - Uniqueness that the logic relies on (`(platform, external_id)`) is a database constraint, not only a check in code.
 - Commit per listing in long runs, so a blocked platform or a crash keeps what was already processed.
 

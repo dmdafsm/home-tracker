@@ -15,6 +15,8 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     create_engine,
+    inspect,
+    text,
 )
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship, sessionmaker
@@ -72,6 +74,9 @@ class Listing(Base):
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     detail_fetched: Mapped[bool] = mapped_column(Boolean, default=False)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Ultima reverificare a paginii de detaliu și momentul în care anunțul a dispărut de pe platformă.
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
 
     property_id: Mapped[int | None] = mapped_column(ForeignKey("property.id"), index=True)
@@ -141,6 +146,33 @@ def make_engine(url: str) -> Engine:
     return create_engine(url, future=True, pool_pre_ping=True)
 
 
+def add_missing_columns(engine: Engine) -> list[str]:
+    """Adaugă în tabelele existente coloanele noi din modele.
+
+    `create_all` creează doar tabelele lipsă, nu și coloanele noi. Coloanele adăugate ulterior
+    trebuie să accepte NULL și să nu aibă valoare implicită în baza de date, ca ALTER TABLE
+    să meargă la fel pe PostgreSQL și pe SQLite.
+    """
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    added = []
+    with engine.begin() as connection:
+        for table in Base.metadata.sorted_tables:
+            if table.name not in existing_tables:
+                continue
+            present = {column["name"] for column in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in present:
+                    continue
+                if not column.nullable or column.server_default is not None:
+                    raise RuntimeError(f"coloana nouă {table.name}.{column.name} trebuie să accepte NULL")
+                column_type = column.type.compile(dialect=engine.dialect)
+                connection.execute(text(f'ALTER TABLE "{table.name}" ADD COLUMN "{column.name}" {column_type}'))
+                added.append(f"{table.name}.{column.name}")
+    return added
+
+
 def init_db(engine: Engine) -> sessionmaker:
     Base.metadata.create_all(engine)
+    add_missing_columns(engine)
     return sessionmaker(engine, expire_on_commit=False, future=True)

@@ -29,6 +29,10 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
   potrivesc, pentru că agențiile refolosesc poze cu fațada blocului.
 - **Alertele** se trimit o singură dată pe apartament și profil, oricâte platforme îl
   publică. O scădere de preț de peste 3% generează o alertă separată.
+- **Reverificarea zilnică**: anunțurile potrivite care nu mai apar în primele pagini de
+  căutare sunt redeschise o dată la 24 de ore (cel mult `RECHECK_PER_RUN` pe rulare). O
+  scădere de preț găsită așa trimite alerta obișnuită; un anunț șters (404/410) e marcat ca
+  dispărut.
 - **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.

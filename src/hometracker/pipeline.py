@@ -6,10 +6,11 @@ import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+import httpx
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from .adapters import ADAPTERS, Adapter
+from .adapters import ADAPTERS, Adapter, ListingRemoved
 from .config import Settings
 from .dedup import assign_property
 from .http import BlockedError, PoliteClient
@@ -49,7 +50,10 @@ class RunStats:
     found: int = 0
     new: int = 0
     alerts: int = 0
+    rechecked: int = 0
+    removed: int = 0
     errors: list[str] = field(default_factory=list)
+    blocked: set[str] = field(default_factory=set)
 
 
 class Pipeline:
@@ -80,6 +84,7 @@ class Pipeline:
                     log.warning("profil %s: platformă necunoscută %s", profile.name, platform)
                     continue
                 self._run_source(profile, adapter_cls(self.client, self.settings), source.url, pages, stats)
+        self._recheck(profiles, stats)
         return stats
 
     def _run_source(self, profile: Profile, adapter: Adapter, url: str, pages: int, stats: RunStats) -> None:
@@ -95,6 +100,7 @@ class Pipeline:
             except BlockedError as exc:
                 session.rollback()  # anunțul la care s-a oprit rămâne pentru rularea următoare
                 run.error = str(exc)
+                stats.blocked.add(adapter.name)
                 log.warning("%s blocat: %s", adapter.name, exc)
             except Exception as exc:  # un adapter stricat nu oprește celelalte
                 session.rollback()
@@ -193,16 +199,34 @@ class Pipeline:
     def _update_existing(
         self, session: Session, profile: Profile, listing: Listing, item: ListingData, stats: RunStats
     ) -> None:
+        change = self._refresh(session, listing, item)
+        if change:
+            self._price_drop_alert(session, profile, listing, *change, stats)
+
+    @staticmethod
+    def _refresh(session: Session, listing: Listing, item: ListingData) -> tuple[float, float] | None:
+        """Anunțul e încă activ: actualizează prețul și întoarce (preț vechi, preț nou) dacă s-a schimbat."""
         listing.last_seen = utcnow()
         listing.active = True
+        listing.removed_at = None
         old_price = listing.price_eur
         new_price = item.price_eur
         if new_price is None or old_price is None or abs(new_price - old_price) < 1:
-            return
+            return None
         listing.price, listing.currency, listing.price_eur = item.price, item.currency, new_price
         session.add(ListingSnapshot(listing=listing, price_eur=new_price))
         log.info("preț schimbat %s: %s → %s", listing.url, old_price, new_price)
+        return old_price, new_price
 
+    def _price_drop_alert(
+        self,
+        session: Session,
+        profile: Profile,
+        listing: Listing,
+        old_price: float,
+        new_price: float,
+        stats: RunStats,
+    ) -> None:
         drop = (old_price - new_price) / old_price * 100
         if drop < profile.notify.price_drop_percent or listing.property_id is None:
             return
@@ -228,6 +252,90 @@ class Pipeline:
             lead=f"Înainte: {format_price(old_price)}",
         )
         stats.alerts += 1
+
+    # ----------------------------------------------------------- reverificare
+
+    def _recheck(self, profiles: list[Profile], stats: RunStats) -> None:
+        """Redeschide pagina de detaliu a anunțurilor potrivite care nu au mai apărut în căutare.
+
+        Căutarea confirmă deja anunțurile pe care le listează, așa că reverificăm doar ce a ieșit din
+        primele pagini: poate s-a schimbat prețul, poate a dispărut (vândut sau retras).
+        """
+        if self.settings.recheck_per_run <= 0:
+            return
+        platforms = {
+            platform
+            for profile in profiles
+            for platform, source in profile.sources.items()
+            if source.enabled and platform in self.adapters
+        } - stats.blocked
+        if not platforms:
+            return
+        cutoff = utcnow() - timedelta(hours=self.settings.recheck_after_hours)
+        adapters: dict[str, Adapter] = {}
+        with self.sessions() as session:
+            due = session.scalars(
+                select(Listing)
+                .where(
+                    Listing.active.is_(True),
+                    Listing.property_id.is_not(None),  # doar anunțurile care au trecut de un profil
+                    Listing.platform.in_(platforms),
+                    Listing.last_seen < cutoff,
+                    or_(Listing.checked_at.is_(None), Listing.checked_at < cutoff),
+                )
+                .order_by(Listing.checked_at.is_not(None), Listing.checked_at, Listing.last_seen)
+                .limit(self.settings.recheck_per_run)
+            ).all()
+            for listing in due:
+                if listing.platform in stats.blocked:
+                    continue
+                adapter = adapters.setdefault(
+                    listing.platform, self.adapters[listing.platform](self.client, self.settings)
+                )
+                self._recheck_one(session, profiles, adapter, listing, stats)
+                session.commit()
+        if due:
+            log.info("reverificare: %d anunțuri, %d dispărute", stats.rechecked, stats.removed)
+
+    def _recheck_one(
+        self, session: Session, profiles: list[Profile], adapter: Adapter, listing: Listing, stats: RunStats
+    ) -> None:
+        now = utcnow()
+        try:
+            item = adapter.fetch_detail(_as_data(listing))
+        except BlockedError as exc:
+            stats.blocked.add(listing.platform)
+            log.warning("reverificare oprită pe %s: %s", listing.platform, exc)
+            return
+        except ListingRemoved:
+            self._mark_removed(listing, now, stats)
+            return
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (404, 410):
+                self._mark_removed(listing, now, stats)
+            else:
+                listing.checked_at = now
+                log.warning("reverificare eșuată %s: %s", listing.url, exc)
+            return
+        except Exception as exc:  # pagina s-a schimbat sau rețeaua a căzut: reîncercăm mâine
+            listing.checked_at = now
+            log.warning("reverificare eșuată %s: %s", listing.url, exc)
+            return
+        listing.checked_at = now
+        stats.rechecked += 1
+        change = self._refresh(session, listing, item)
+        if change:
+            for profile in profiles:
+                self._price_drop_alert(session, profile, listing, *change, stats)
+
+    @staticmethod
+    def _mark_removed(listing: Listing, now: datetime, stats: RunStats) -> None:
+        listing.active = False
+        listing.removed_at = now
+        listing.checked_at = now
+        stats.rechecked += 1
+        stats.removed += 1
+        log.info("anunț dispărut: %s", listing.url)
 
     def _download_photos(self, session: Session, listing: Listing, urls: list[str]) -> None:
         for position, url in enumerate(urls[: self.settings.photos_per_listing]):

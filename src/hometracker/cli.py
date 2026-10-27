@@ -45,11 +45,13 @@ def _run_once(settings: Settings, sessions, *, catchup: bool, profile_name: str 
     with PoliteClient(settings) as client:
         stats = Pipeline(settings, sessions, client, Notifier(settings)).run(profiles, pages)
     log.info(
-        "rulare %s gata: %d văzute, %d noi, %d alerte%s",
+        "rulare %s gata: %d văzute, %d noi, %d alerte, %d reverificate (%d dispărute)%s",
         "de recuperare" if catchup else "normală",
         stats.found,
         stats.new,
         stats.alerts,
+        stats.rechecked,
+        stats.removed,
         f", erori: {'; '.join(stats.errors)}" if stats.errors else "",
     )
 

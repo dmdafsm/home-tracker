@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .base import Adapter
+from .base import Adapter, ListingRemoved
 from .imobiliare import ImobiliareAdapter
 from .olx import OlxAdapter
 from .storia import StoriaAdapter
@@ -13,4 +13,4 @@ ADAPTERS: dict[str, type[Adapter]] = {
     ImobiliareAdapter.name: ImobiliareAdapter,
 }
 
-__all__ = ["ADAPTERS", "Adapter"]
+__all__ = ["ADAPTERS", "Adapter", "ListingRemoved"]

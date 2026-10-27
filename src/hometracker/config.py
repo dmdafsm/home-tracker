@@ -48,6 +48,10 @@ class Settings:
     eur_ron: float = 4.97
     log_level: str = "INFO"
 
+    # Reverificarea zilnică: anunțurile potrivite, nevăzute în căutare de atâtea ore, câte maximum pe rulare.
+    recheck_after_hours: int = 24
+    recheck_per_run: int = 10
+
     photos_per_listing: int = 5
     user_agent: str = field(
         default=(
@@ -93,4 +97,6 @@ def load_settings() -> Settings:
         request_delay_max=_env_float("REQUEST_DELAY_MAX", 9.0),
         eur_ron=_env_float("EUR_RON", 4.97),
         log_level=_env("LOG_LEVEL", "INFO"),
+        recheck_after_hours=_env_int("RECHECK_AFTER_HOURS", 24),
+        recheck_per_run=_env_int("RECHECK_PER_RUN", 10),
     )
