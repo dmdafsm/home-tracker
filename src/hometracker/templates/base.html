@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <title>{% block title %}home-tracker{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f7f6f3; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e4e2dc;
+      --accent: #2f5d8a; --good: #2e7d4f; --warn: #a15c00; --bad: #a33a3a;
+      --s0: #2f5d8a; --s1: #b5603a; --s2: #3f8a5b; --s3: #7a4f9a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #151517; --card: #1f1f22; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33;
+        --accent: #7fb0e0; --good: #6cc492; --warn: #e0a85a; --bad: #e08080;
+        --s0: #7fb0e0; --s1: #e09a78; --s2: #7fcf9c; --s3: #b996d6;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text);
+           font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    header.top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline;
+                 padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+    header.top h1 { font-size: 17px; margin: 0; }
+    main { max-width: 960px; margin: 0 auto; padding: 16px; }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 12px;
+           border: 1px solid var(--line); color: var(--muted); margin-right: 4px; }
+    .tag.good { color: var(--good); border-color: currentColor; }
+    .tag.warn { color: var(--warn); border-color: currentColor; }
+    .tag.bad { color: var(--bad); border-color: currentColor; }
+    .cards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+            display: flex; flex-direction: column; color: inherit; }
+    .card:hover { text-decoration: none; border-color: var(--accent); }
+    .card img, .card .noimg { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: var(--line); display: block; }
+    .card .noimg { display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+    .card .body { padding: 10px 12px 12px; display: grid; gap: 4px; }
+    .price { font-size: 18px; font-weight: 600; }
+    .score { float: right; font-weight: 600; }
+    section { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+              padding: 14px 16px; margin-bottom: 14px; }
+    section h2 { font-size: 15px; margin: 0 0 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-weight: 500; border-top: 0; }
+    .scroll { overflow-x: auto; }
+    .gallery { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+    .gallery img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 6px; display: block; }
+    .chart { width: 100%; height: auto; }
+    .chart .axis { fill: var(--muted); font-size: 11px; }
+    .chart .s0 { stroke: var(--s0); fill: var(--s0); } .chart .s1 { stroke: var(--s1); fill: var(--s1); }
+    .chart .s2 { stroke: var(--s2); fill: var(--s2); } .chart .s3 { stroke: var(--s3); fill: var(--s3); }
+    .chart polyline { fill: none; }
+    .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; }
+    .key::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+                   margin-right: 5px; vertical-align: -1px; background: currentColor; }
+    .key.s0 { color: var(--s0); } .key.s1 { color: var(--s1); } .key.s2 { color: var(--s2); } .key.s3 { color: var(--s3); }
+    .nowrap { white-space: nowrap; }
+    .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-bottom: 14px; align-items: center; }
+    .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1><a href="/">home-tracker</a></h1>
+    {% block header %}{% endblock %}
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

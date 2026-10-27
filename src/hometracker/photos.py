@@ -50,10 +50,15 @@ def safe_component(value: str) -> str:
     return "h-" + hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
 
 
-def save_image(directory: Path, platform: str, external_id: str, position: int, data: bytes) -> Path:
+def image_path(directory: Path, platform: str, external_id: str, position: int) -> Path:
+    """Unde stă poza unui anunț, calculat doar din câmpurile lui (la fel la salvare și la afișare)."""
     if not _SAFE_COMPONENT.fullmatch(platform):
         raise ValueError(f"nume de platformă nevalid: {platform!r}")
-    path = directory / platform / safe_component(external_id) / f"{position:02d}.jpg"
+    return directory / platform / safe_component(external_id) / f"{position:02d}.jpg"
+
+
+def save_image(directory: Path, platform: str, external_id: str, position: int, data: bytes) -> Path:
+    path = image_path(directory, platform, external_id, position)
     # A doua barieră, dacă regula de mai sus ar fi slăbită vreodată.
     if not path.resolve().is_relative_to(directory.resolve()):
         raise ValueError(f"calea pozei iese din {directory}: {path}")

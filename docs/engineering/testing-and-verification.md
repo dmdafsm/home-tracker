@@ -23,7 +23,7 @@ Run `python3 scripts/verify.py` from the repository root. It runs, in order:
 | Schema | The test database plus an existing-database migration test when a column is added (SQLite in the suite; check PostgreSQL once with a throwaway `postgres:16-alpine` container and report it). |
 | Notifications | Fake notifier in tests; one real `hometracker test-notify ntfy` (and `email` if touched) reported in the PR. |
 | Docker / compose | `docker compose config -q` (needs `.env`), `docker compose build`, and the worker's log after one run. |
-| Web interface (stage 2) | Start it, open every changed page in the browser, check there are no errors and the data matches the CLI. |
+| Web interface | Page tests with FastAPI's `TestClient` (`tests/test_web.py`), including escaping and the photo path check. Then start it on demo data (`DATA_DIR=data/demo uv run hometracker demo`, preview `web-demo`), open every changed page at desktop and phone width and in dark mode, check there are no console errors or horizontal scroll, and that the numbers match `hometracker property`. |
 
 Use the minimum useful suite for the change; protect invariants and regressions rather than a coverage number.
 
