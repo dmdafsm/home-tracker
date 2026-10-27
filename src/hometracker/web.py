@@ -15,6 +15,7 @@ from markupsafe import Markup, escape
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
+from .authenticity import Assessment, Context, assess
 from .config import Settings
 from .history import PropertyHistory, match_label, property_history, publisher_label
 from .models import Alert, Listing, Photo, as_utc, init_db, make_engine, utcnow
@@ -39,6 +40,7 @@ class FeedItem:
     result: MatchResult
     photo_id: int | None
     alerted: bool
+    assessment: Assessment
 
     @property
     def platforms(self) -> list[str]:
@@ -51,6 +53,7 @@ def feed(session, profile: Profile, *, include_removed: bool = False) -> list[Fe
     alerted = set(
         session.scalars(select(Alert.property_id).where(Alert.profile == profile.name, Alert.kind == "new")).all()
     )
+    context = Context.build(session)
     items = []
     for property_id in property_ids.all():
         history = property_history(session, property_id)
@@ -62,7 +65,16 @@ def feed(session, profile: Profile, *, include_removed: bool = False) -> list[Fe
         if not scored:
             continue
         listing, result = max(scored, key=lambda pair: pair[1].score)
-        items.append(FeedItem(history, listing, result, _first_photo_id(session, history), property_id in alerted))
+        items.append(
+            FeedItem(
+                history,
+                listing,
+                result,
+                _first_photo_id(session, history),
+                property_id in alerted,
+                assess(history, context),
+            )
+        )
     items.sort(key=lambda item: (-item.result.score, -as_utc(item.history.listings[-1].first_seen).timestamp()))
     return items
 
@@ -188,7 +200,13 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
             return TEMPLATES.TemplateResponse(
                 request,
                 "property.html",
-                {"history": history, "photos": photos, "chart": price_chart(history), "now": utcnow()},
+                {
+                    "history": history,
+                    "photos": photos,
+                    "chart": price_chart(history),
+                    "assessment": assess(history, Context.build(session)),
+                    "now": utcnow(),
+                },
             )
 
     @app.get("/publishers", response_class=HTMLResponse)

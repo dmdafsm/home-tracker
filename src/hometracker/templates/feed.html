@@ -43,6 +43,8 @@
       <div>
         {% if not h.active %}<span class="tag bad">dispărut</span>{% endif %}
         {% if h.republications %}<span class="tag warn">{{ plural(h.republications|length, "republicare", "republicări") }}</span>{% endif %}
+        {% set a = item.assessment %}
+        <span class="tag trust {{ 'high' if a.score >= 70 else ('mid' if a.score >= 40 else 'low') }}" title="{% for s in a.signals %}{{ s.label }}: {{ s.detail }}{% if not loop.last %}; {% endif %}{% endfor %}">autenticitate {{ a.score }}</span>
         {% if item.alerted %}<span class="tag good">alertat</span>{% elif item.result.score < profile.notify.min_score %}<span class="tag">sub pragul de alertă</span>{% endif %}
       </div>
     </div>

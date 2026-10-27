@@ -52,6 +52,8 @@ class NotifySettings(BaseModel):
     min_score: float = 60
     price_drop_percent: float = 3
     channels: list[str] = Field(default_factory=lambda: ["ntfy"])
+    # Alertele instant pentru apartamente noi cer și un scor de autenticitate cel puțin atât (0 = oricât).
+    min_authenticity: float = 0
     # Rezumatul zilnic; o listă goală îl dezactivează.
     summary_channels: list[str] = Field(default_factory=lambda: ["email"])
 

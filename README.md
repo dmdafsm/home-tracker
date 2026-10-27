@@ -104,6 +104,13 @@ login propriu, deci din exterior se deschide doar printr-un hostname separat al 
     service: http://localhost:8080
 ```
 
+Fiecare apartament are un **scor de autenticitate** (0–100) cu semnalele care l-au scăzut:
+aceleași poze la mai mulți publicatori, o agenție care a publicat după proprietar, un preț mult
+sub mediana apartamentelor asemănătoare, un „proprietar” cu telefonul la multe apartamente, poze
+dintr-un anunț dispărut, republicări luni de zile la același preț, detalii lipsă. Scorul nu
+dovedește nimic; arată ce merită verificat la telefon. În profil, `notify.min_authenticity`
+poate opri alertele instant sub un prag.
+
 Pagina **Publicatori** arată, pentru fiecare agenție sau proprietar, câte anunțuri active are, câte
 apartamente, ce procent a preluat de la alții (apartamentul apăruse întâi la alt publicator) și
 cu cât e în medie mai scump sau mai ieftin decât ceilalți pentru aceleași apartamente. Un

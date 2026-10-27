@@ -29,6 +29,9 @@ notify:
   channels: [ntfy, email]
   # Rezumatul zilnic (după SUMMARY_HOUR): noi sub prag, dispărute, goluri. [] îl dezactivează.
   summary_channels: [email]
+  # Alertele instant cer și un scor de autenticitate cel puțin atât (0–100). 30 oprește doar
+  # apartamentele cu cel puțin trei semnale mari; restul primesc alerta, cu semnalele în mesaj.
+  min_authenticity: 30
 
 # Căutările de pe fiecare platformă. Cel mai sigur: setează filtrele pe site,
 # în browser, și copiază aici URL-ul rezultat, sortat după cele mai noi.

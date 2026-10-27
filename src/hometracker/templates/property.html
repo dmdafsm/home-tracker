@@ -18,6 +18,20 @@
   {% if not history.active %}<span class="tag bad">nu mai e activ pe nicio platformă</span>{% endif %}
 </section>
 
+<section>
+  {% set a = assessment %}
+  <h2>Autenticitate: <span class="trust {{ 'high' if a.score >= 70 else ('mid' if a.score >= 40 else 'low') }}">{{ a.score }}</span> / 100</h2>
+  {% if a.signals %}
+  <ul class="signals small">
+    {% for s in a.signals %}<li><strong>{{ s.label }}</strong> (−{{ s.penalty }}): {{ s.detail }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="small muted">Niciun semnal suspect găsit.</p>
+  {% endif %}
+  {% for note in a.notes %}<p class="small muted">{{ note }}</p>{% endfor %}
+  <p class="small muted">Scorul adună semnale, nu dovedește nimic: sună și verifică înainte să decizi.</p>
+</section>
+
 {% if chart %}
 <section>
   <h2>Istoricul prețului</h2>
