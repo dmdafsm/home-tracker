@@ -35,6 +35,10 @@ sources:
     enabled: false
     url: "https://www.olx.ro/imobiliare/apartamente-garsoniere-de-vanzare/cluj-napoca/q-gheorgheni/?currency=EUR&search%5Border%5D=created_at:desc&search%5Bfilter_float_price:from%5D=130000&search%5Bfilter_float_price:to%5D=165000"
   imobiliare:
+    # Dezactivat: din octombrie 2026, Imobiliare.ro răspunde colectorului cu HTTP 403 și cere o verificare
+    # (protecție anti-bot). Nu o ocolim (fără alt User-Agent, IP, proxy sau browser simulat); reactivează
+    # sursa doar când există o cale permisă. Detalii: docs/architecture.md.
+    enabled: false
     url: "https://www.imobiliare.ro/vanzare-apartamente/cluj-napoca/gheorgheni?pret=130000-165000"
   # Publi24: căutarea cu zona Gheorgheni (verificată în octombrie 2026). Sortarea după cele mai noi nu
   # e confirmată încă; pagina 1 are 20 de anunțuri.
