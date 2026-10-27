@@ -4,7 +4,9 @@
 
 - **Public code, private data** ([ADR 0003](decisions/0003-public-repository.md)): the repository is public; collected listings, photos, raw pages, the database and anything copied from a platform stay on the maintainer's machine (`data/`, `.research/`). Test fixtures and test strings are synthetic: a page's structure with invented listings, prices, names, phone numbers and image URLs.
 - **Storia, OLX** forbid automated collection in their terms. The tool is used only by the maintainer, at low volume and a human pace, without bypassing protections, and its data is used only by the maintainer. Do not add features that republish listings or photos, share results with others or run the collector as a service.
-- **Imobiliare.ro, Publi24, Lajumate, agency sites**: check the terms when adding or changing an adapter and record them in `.research/`.
+- **Publi24**: `robots.txt` (checked October 2026) explicitly allows crawlers including Anthropic's; listing pages are public.
+- **Lajumate**: `robots.txt` allows everything except internal search (`/search?q=`), accounts and `/api/`; the adapter uses category pages and `/ad/` listing pages only. Its image service answers "Image not found" to requests that do not come from the site's own pages, so the adapter does not download Lajumate photos and does not imitate a browser context to get them.
+- **Imobiliare.ro, agency sites**: check the terms when adding or changing an adapter and record them in `.research/`.
 - Opening the tool to other users would need legal advice on the platforms' terms and GDPR, and preferably official APIs or partnerships. It is out of scope for this repository.
 
 ## Respecting protections

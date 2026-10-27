@@ -50,3 +50,11 @@ sources:
     url: "https://www.olx.ro/imobiliare/apartamente-garsoniere-de-vanzare/cluj-napoca/q-gheorgheni/?currency=EUR&search%5Border%5D=created_at:desc&search%5Bfilter_float_price:from%5D=130000&search%5Bfilter_float_price:to%5D=165000"
   imobiliare:
     url: "https://www.imobiliare.ro/vanzare-apartamente/cluj-napoca/gheorgheni?pret=130000-165000"
+  # Publi24: căutarea cu zona Gheorgheni (verificată în octombrie 2026). Sortarea după cele mai noi nu
+  # e confirmată încă; pagina 1 are 20 de anunțuri.
+  publi24:
+    url: "https://www.publi24.ro/anunturi/imobiliare/de-vanzare/apartamente/cluj/cluj-napoca/?area=gheorgheni"
+  # Lajumate nu are filtru de cartier în URL: toată categoria din Cluj-Napoca, cele mai noi întâi
+  # (verificat), iar profilul păstrează doar anunțurile care pomenesc Gheorgheni.
+  lajumate:
+    url: "https://lajumate.ro/anunturi/imobiliare/apartamente-de-vanzare/in/cluj/cluj-napoca"

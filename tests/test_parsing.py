@@ -50,6 +50,7 @@ def test_parse_floor_value(value, expected):
         ("Vând ap. 3 cam, et. 1/4, bloc de cărămidă", "1"),
         ("etajul 4 din 4, fără lift", "4"),
         ("Situat la parter, ideal pentru persoane în vârstă", "ground"),
+        ("Caracteristici:\n - Etaj: 3 din 4\n - Compartimentare: semidecomandat", "3"),
         ("Apartament luminos cu balcon", None),
     ],
 )

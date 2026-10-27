@@ -13,7 +13,9 @@ import pytest
 from hometracker.adapters import ListingRemoved
 from hometracker.adapters.base import merge, with_query_param
 from hometracker.adapters.imobiliare import ImobiliareAdapter
+from hometracker.adapters.lajumate import LajumateAdapter
 from hometracker.adapters.olx import OlxAdapter
+from hometracker.adapters.publi24 import Publi24Adapter
 from hometracker.adapters.storia import StoriaAdapter
 from hometracker.config import Settings
 from hometracker.schema import ListingData
@@ -263,3 +265,72 @@ def test_unverified_adapters_never_report_removed():
     # OLX și Imobiliare.ro nu au încă o pagină reală de anunț expirat verificată; până atunci rămân pe 404/410.
     for adapter in (OlxAdapter(None, SETTINGS), ImobiliareAdapter(None, SETTINGS)):
         assert not adapter.is_removed(fixture("storia_detail_removed_synthetic.html"), "https://x.test/")
+
+
+# ------------------------------------------------------------- Publi24
+
+
+def test_publi24_search_reads_json_ld_with_raw_newlines():
+    adapter = Publi24Adapter(None, SETTINGS)
+    items = list(adapter.parse_search(fixture("publi24_search_synthetic.html"), "https://www.publi24.ro/x"))
+    assert [item.external_id for item in items] == [
+        "0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d",
+        "1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e",
+    ]
+    first, second = items
+    assert first.url.startswith("https://www.publi24.ro/anunturi/") and first.title == "Apartament 2 camere, Gheorgheni"
+    assert (first.price_eur, first.rooms, first.floor, first.balcony) == (148000, 2, "1", True)
+    assert first.area_m2 == 51  # „0” în JSON-LD: luat din descriere
+    assert "1 din 4'" in first.description  # entitatea HTML a fost decodată
+    assert first.location_text == "Cluj-Napoca, Cluj" and first.phone == "0722 000 333"
+    assert (second.rooms, second.floor, second.area_m2, second.currency) == (1, "ground", 28, "RON")
+    assert abs(second.price_eur - 540000 / SETTINGS.eur_ron) < 1
+
+
+def test_publi24_detail_reads_attributes_and_publisher():
+    adapter = Publi24Adapter(None, SETTINGS)
+    url = "https://www.publi24.ro/anunturi/imobiliare/de-vanzare/apartamente/apartamente-2-camere/anunt/apartament-2-camere-gheorgheni/0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d.html"
+    detail = adapter.parse_detail(fixture("publi24_detail_synthetic.html"), url)
+    assert detail.is_detail and detail.external_id == "0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d"
+    assert (detail.area_m2, detail.rooms, detail.floor) == (51, 2, "1")
+    assert detail.publisher_name == "Ion Exemplu" and detail.extra["build_year"] == "1978"
+    assert len(detail.photo_urls) == 3
+
+
+def test_publi24_page_without_json_ld_yields_nothing():
+    assert list(Publi24Adapter(None, SETTINGS).parse_search("<html></html>", "x")) == []
+
+
+# ------------------------------------------------------------ Lajumate
+
+
+def test_lajumate_search_reads_next_data():
+    adapter = LajumateAdapter(None, SETTINGS)
+    first, second = adapter.parse_search(fixture("lajumate_search_synthetic.html"), "https://lajumate.ro/x")
+    assert first.url == "https://lajumate.ro/ad/apartament-2-camere-gheorgheni-test-1-9000001"
+    assert (first.price_eur, first.area_m2, first.rooms, first.floor) == (149000, 52, 2, "ground")
+    assert first.phone == "0722000444" and first.publisher_name == "Ana Exemplu"
+    assert first.extra["build_year"] == "1980" and first.extra["copy_of"] == "homezz"
+    assert first.photo_urls == []  # serviciul de imagini nu le servește în afara site-ului
+    assert first.extra["photo_urls"] == [
+        "https://api-preprod.lajumate.ro/opt-image/media/i/big/0/0/9000001_test_1.webp"
+    ]
+    assert second.area_m2 is None  # „2” mp e o greșeală a publicatorului
+    assert second.floor == "13" and second.phone is None  # telefon ascuns
+
+
+def test_lajumate_detail_reads_publisher_type_and_html_description():
+    adapter = LajumateAdapter(None, SETTINGS)
+    detail = adapter.parse_detail(fixture("lajumate_detail_synthetic.html"), "https://lajumate.ro/x")
+    assert detail.is_detail and detail.publisher_type == "agency" and detail.publisher_name == "Agenția Test"
+    assert detail.description == "Apartament la parter, cu balcon." and detail.balcony is True
+    assert detail.extra["photo_urls"] == [
+        "https://api-preprod.lajumate.ro/opt-image/media/i/big/0/0/9000001_test_7.webp"
+    ]
+    assert detail.posted_at is not None
+
+
+def test_lajumate_page_without_next_data_yields_nothing():
+    adapter = LajumateAdapter(None, SETTINGS)
+    assert list(adapter.parse_search("<html></html>", "x")) == []
+    assert adapter.parse_detail("<html></html>", "x").external_id == ""

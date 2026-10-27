@@ -13,7 +13,13 @@ from .config import Settings
 
 log = logging.getLogger(__name__)
 
-PLATFORM_NAMES = {"storia": "Storia", "olx": "OLX", "imobiliare": "Imobiliare.ro"}
+PLATFORM_NAMES = {
+    "storia": "Storia",
+    "olx": "OLX",
+    "imobiliare": "Imobiliare.ro",
+    "publi24": "Publi24",
+    "lajumate": "Lajumate",
+}
 FLOOR_NAMES = {"basement": "demisol", "ground": "parter", "raised_ground": "parter înalt", "attic": "mansardă"}
 
 

@@ -73,7 +73,7 @@ _TEXT_FLOOR_PATTERNS: list[tuple[re.Pattern[str], str | None]] = [
     (re.compile(r"\bdemisol\b|\bsubsol\b"), BASEMENT),
     (re.compile(r"\b(?:la |situat la |amplasat la )?parter\b"), GROUND),
     (re.compile(r"\bmansarda\b"), ATTIC),
-    (re.compile(r"\bet(?:aj(?:ul)?|\.)\s*(\d{1,2})\b"), None),
+    (re.compile(r"\bet(?:aj(?:ul)?|\.)\s*:?\s*(\d{1,2})\b"), None),  # „etaj 3”, „et. 3”, „Etaj: 3 din 4”
     (re.compile(r"\bet(?:ajul)?\s+(\d{1,2})\s*/\s*\d{1,2}\b"), None),
 ]
 

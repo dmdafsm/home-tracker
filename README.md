@@ -1,7 +1,7 @@
 # home-tracker
 
 Tracker de piață imobiliară care rulează local, în Docker. Colectează anunțuri de pe
-Storia, OLX și Imobiliare.ro și grupează pe apartamente fizice anunțurile care au
+Storia, Imobiliare.ro, Publi24 și Lajumate (OLX e dezactivat, vezi mai jos) și grupează pe apartamente fizice anunțurile care au
 aceleași poze. Când apare un apartament care se potrivește unui profil de căutare,
 trimite o notificare pe telefon prin [ntfy](https://ntfy.sh) și, opțional, pe email.
 

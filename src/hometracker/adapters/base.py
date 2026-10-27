@@ -108,7 +108,8 @@ def json_ld(html: str) -> list[dict]:
     blocks: list[dict] = []
     for tag in soup.find_all("script", type="application/ld+json"):
         try:
-            data = json.loads(tag.string or "")
+            # strict=False: unele site-uri (Publi24) lasă rânduri noi netransformate în texte.
+            data = json.loads(tag.string or "", strict=False)
         except json.JSONDecodeError:
             continue
         stack = data if isinstance(data, list) else [data]
