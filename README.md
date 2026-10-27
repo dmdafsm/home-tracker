@@ -1,7 +1,7 @@
 # home-tracker
 
 Tracker de piață imobiliară care rulează local, în Docker. Colectează anunțuri de pe
-Storia, Imobiliare.ro, Publi24 și Lajumate (OLX e dezactivat, vezi mai jos), grupează pe
+Storia, Publi24 și Lajumate (OLX și Imobiliare.ro sunt dezactivate, vezi mai jos), grupează pe
 apartamente fizice anunțurile care descriu același apartament și le arată într-o interfață
 web, filtrate și ordonate după profilurile de căutare. Nu trimite notificări: totul se
 urmărește în interfață.
@@ -12,7 +12,7 @@ Planul e în [docs/plan.md](docs/plan.md), iar arhitectura actuală în
 ## Cum funcționează
 
 ```
-worker (periodic) ─► adaptere (storia, imobiliare, publi24, lajumate) ─► arhivă HTML brut (data/raw)
+worker (periodic) ─► adaptere (storia, publi24, lajumate) ─► arhivă HTML brut (data/raw)
                           │
                           ▼
                   profil YAML: filtre + scor ─► poze + pHash ─► grupare pe apartament
@@ -144,6 +144,10 @@ mai găsește anunțuri, iar pagina **Stare** (și bannerul din feed) arată pro
 **OLX e dezactivat** în profilul inclus: din octombrie 2026 răspunde colectorului cu HTTP 403
 („Request blocked”, de la CloudFront), chiar și pentru căutare. Adapterul rămâne în cod, dar
 sursa are `enabled: false` până există o cale permisă de colectare.
+
+**Imobiliare.ro e dezactivat** din același motiv: din octombrie 2026 răspunde colectorului cu HTTP 403 și
+cere o verificare anti-bot. Proiecte care îl colectează totuși (de exemplu prin `curl_cffi` cu amprenta unui
+browser, User-Agent fals sau proxy-uri rotative) ocolesc protecția, iar asta e exclus aici.
 
 Adapterele nu ocolesc protecțiile site-urilor. Dacă un site cere o verificare (CAPTCHA),
 rularea se oprește pentru platforma respectivă și reîncearcă la intervalul următor.

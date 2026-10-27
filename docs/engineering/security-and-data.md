@@ -6,7 +6,8 @@
 - **Storia, OLX** forbid automated collection in their terms. The tool is used only by the maintainer, at low volume and a human pace, without bypassing protections, and its data is used only by the maintainer. Do not add features that republish listings or photos, share results with others or run the collector as a service.
 - **Publi24**: `robots.txt` (checked October 2026) explicitly allows crawlers including Anthropic's; listing pages are public.
 - **Lajumate**: `robots.txt` allows everything except internal search (`/search?q=`), accounts and `/api/`; the adapter uses category pages and `/ad/` listing pages only. Its image service answers "Image not found" to requests that do not come from the site's own pages, so the adapter does not download Lajumate photos and does not imitate a browser context to get them.
-- **Imobiliare.ro, agency sites**: check the terms when adding or changing an adapter and record them in `.research/`.
+- **Imobiliare.ro**: answers the collector with HTTP 403 and a bot verification (October 2026), so the source is disabled in the profile. Do not get past it with a browser TLS fingerprint (`curl_cffi`), a browser User-Agent, rotating proxies or a headless browser.
+- **Agency sites**: check the terms when adding or changing an adapter and record them in `.research/`.
 - Opening the tool to other users would need legal advice on the platforms' terms and GDPR, and preferably official APIs or partnerships. It is out of scope for this repository.
 
 ## Respecting protections

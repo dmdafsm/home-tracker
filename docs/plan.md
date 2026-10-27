@@ -38,7 +38,7 @@ Fiecare platformă are propriul colector (adapter), cu o interfață comună: `s
 | --- | --- | --- |
 | Storia | JSON-ul embed din pagină (Next.js) | MVP |
 | OLX | API-ul intern folosit de site, altfel HTML | MVP |
-| Imobiliare.ro | HTML; Playwright dacă e nevoie | MVP |
+| Imobiliare.ro | HTML; dezactivat din octombrie 2026 (HTTP 403, verificare anti-bot) | MVP |
 | Publi24 | HTML | etapa 2 |
 | Lajumate | HTML | etapa 2 |
 | Site-uri de agenții din Cluj | HTML, câte un adapter pe agenție | etapa 3 |
