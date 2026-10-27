@@ -30,7 +30,7 @@ profiles/*.yaml ──> pipeline ──> adapter.search(url) ──> PoliteClien
 - **Parsing helpers** (`parsing.py`) interpret Romanian text: price and currency, floor, area, rooms, balcony, phone numbers.
 - **Profiles** (`profiles.py`) load `profiles/*.yaml` and compute hard filters plus a 0–100 preference score with reasons.
 - **Dedup** (`dedup.py`) attaches a listing to an existing property when they share at least two informative photos (Hamming distance ≤ 8 on pHash), or one photo plus the same area and floor.
-- **Pipeline** (`pipeline.py`) runs a profile across its sources, stores listings and snapshots, downloads photos for matching listings, assigns properties, sends alerts and warns when an adapter errors or returns nothing.
+- **Pipeline** (`pipeline.py`) runs a profile across its sources, stores listings and snapshots, downloads photos for matching listings, assigns properties, sends alerts and warns when an adapter errors or returns nothing. After the searches it rechecks matched listings that have left the search results (see below).
 - **Notifications** (`notify.py`): ntfy (JSON publish, token auth) and SMTP email.
 - **CLI** (`cli.py`): `loop`, `run [--catchup]`, `dump <url>`, `test-notify`, `matches`.
 
@@ -40,7 +40,7 @@ All tables are defined in `models.py` and written by the worker only.
 
 | Table | Written by | Holds |
 | --- | --- | --- |
-| `listing` | `pipeline.py` | one listing on one platform, unique per `(platform, external_id)`; `phone_hash`, never the phone |
+| `listing` | `pipeline.py` | one listing on one platform, unique per `(platform, external_id)`; `phone_hash`, never the phone; `active`, `checked_at` and `removed_at` from the recheck |
 | `listing_snapshot` | `pipeline.py` | the listing's price when first seen and at every change |
 | `photo` | `pipeline.py` | downloaded photos: source URL, local path, pHash, dHash |
 | `property` | `dedup.py` | the physical apartment (cluster); listings point to it through `listing.property_id` |
@@ -52,9 +52,10 @@ All tables are defined in `models.py` and written by the worker only.
 - **Prices** are kept as published (`price`, `currency`) and converted to `price_eur` with the `EUR_RON` setting; filters and alerts use `price_eur`.
 - **Floors** are strings: `basement`, `ground`, `raised_ground`, `1`, `2`, …, `attic`; `None` means unknown, which a profile may allow.
 - **Unknown is not false**: `balcony`, `area_m2`, `rooms` and `floor` stay `None` when the page does not say.
+- **Recheck**: a listing seen in search is confirmed by the search itself (`last_seen`). A listing that passed a profile (`property_id` set), is still `active` and has not been seen in search for `RECHECK_AFTER_HOURS` (24) gets its detail page fetched again, at most `RECHECK_PER_RUN` (10) per run and once per period (`checked_at`). A new price goes through the same snapshot and price-drop rules as the search. HTTP 404/410, or `Adapter.is_removed` on the page, marks the listing `active = False` with `removed_at`; it becomes active again if it reappears in search. Other errors leave it active and retry next period; a block stops the recheck for that platform. `is_removed` is still the default (`False`) for all three adapters until each is checked against a real expired listing.
 - **Catch-up**: after a gap longer than two intervals (Mac asleep or off), the next run reads `PAGES_CATCHUP` result pages instead of `PAGES_NORMAL`.
 - **Local files**: `data/raw/` (gzipped HTML), `data/photos/`, `data/debug/` (pages saved by `dump`). Without `DATABASE_URL`, the app uses SQLite at `data/hometracker.db`.
 
 ## Schema evolution
 
-`init_db` calls `Base.metadata.create_all`, which creates missing tables but does not add columns to existing ones. Until a migration tool is adopted, a new column on an existing table needs an idempotent startup step that checks the existing columns (`sqlalchemy.inspect`) and runs `ALTER TABLE … ADD COLUMN` only when missing (SQLite has no `ADD COLUMN IF NOT EXISTS`), or a documented rebuild from `data/raw/`. Adopting Alembic, PostGIS or pgvector is a decision record ([ADR 0002](engineering/decisions/0002-sqlalchemy-postgres.md)).
+`init_db` calls `Base.metadata.create_all`, which creates missing tables, then `models.add_missing_columns`, which adds to existing tables the model columns they lack (`ALTER TABLE … ADD COLUMN`, checked with `sqlalchemy.inspect`, idempotent, tested on SQLite and PostgreSQL). It only handles columns that accept NULL and have no server default, and refuses anything else. Renames, type changes and required columns need an explicit migration or a documented rebuild from `data/raw/`. Adopting Alembic, PostGIS or pgvector is a decision record ([ADR 0002](engineering/decisions/0002-sqlalchemy-postgres.md)).

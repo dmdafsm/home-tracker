@@ -19,6 +19,10 @@ from ..schema import ListingData
 log = logging.getLogger(__name__)
 
 
+class ListingRemoved(Exception):
+    """Pagina de detaliu arată că anunțul nu mai e activ pe platformă."""
+
+
 class Adapter(ABC):
     name: str = ""
     page_param: str = "page"
@@ -44,8 +48,16 @@ class Adapter(ABC):
 
     def fetch_detail(self, listing: ListingData) -> ListingData:
         response = self.client.get(listing.url)
+        if self.is_removed(response.text, str(response.url)):
+            raise ListingRemoved(listing.url)
         detail = self.parse_detail(response.text, listing.url)
         return merge(listing, detail)
+
+    def is_removed(self, html: str, url: str) -> bool:
+        """Anunț dezactivat, deși pagina răspunde cu 200 (de exemplu „anunț inactiv” sau o redirecționare
+        spre căutare). Fiecare adapter îl suprascrie după ce a văzut o pagină reală; 404 și 410 se tratează
+        separat, în pipeline."""
+        return False
 
     @abstractmethod
     def parse_search(self, html: str, url: str) -> Iterator[ListingData]: ...
