@@ -82,7 +82,9 @@ def test_merge_moves_listings_and_labels(three_agencies):
         session.commit()
     assert kept == min(ids["a"], ids["b"])
     with sessions() as session:
-        assert session.get(Property, ids["b"]) is None
+        assert session.query(Listing).filter_by(property_id=ids["b"]).count() == 0  # rândul rămâne, gol
+        with pytest.raises(LookupError):
+            merge_properties(session, kept, ids["b"])  # deja unit
         moved = session.query(Listing).filter_by(external_id="b").one()
         assert (moved.property_id, moved.match_reason) == (kept, "manual")
         label = session.get(PropertyLabel, kept)
@@ -149,3 +151,21 @@ def test_merge_pages(web):
     distinct = client.post(f"/property/{ids['a']}/distinct/{ids['c']}", headers=same, follow_redirects=False)
     assert distinct.status_code == 303
     assert "Posibil același apartament" not in client.get(f"/property/{ids['a']}").text
+
+
+def test_merge_works_with_the_legacy_alert_table(three_agencies):
+    """Bazele de date de dinainte de renunțarea la notificări păstrează `alert`, cu cheie străină spre property."""
+    from sqlalchemy import text
+
+    _catalog, sessions, _run = three_agencies
+    ids = properties(sessions)
+    with sessions() as session:
+        session.execute(
+            text("CREATE TABLE alert (id INTEGER PRIMARY KEY, property_id INTEGER REFERENCES property(id))")
+        )
+        session.execute(text("INSERT INTO alert (property_id) VALUES (:a), (:b)"), {"a": ids["a"], "b": ids["b"]})
+        session.commit()
+        kept = merge_properties(session, ids["b"], ids["a"])
+        session.commit()  # cu cheile străine verificate (ca în PostgreSQL), unirea nu mai e refuzată
+        assert {row.property_id for row in session.query(Listing).filter(Listing.external_id.in_(["a", "b"]))} == {kept}
+        assert session.get(Property, max(ids["a"], ids["b"])) is not None

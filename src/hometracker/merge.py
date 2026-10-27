@@ -151,6 +151,8 @@ def merge_properties(session: Session, a: int, b: int) -> int:
     keep, drop = session.get(Property, keep_id), session.get(Property, drop_id)
     if keep is None or drop is None:
         raise LookupError("apartament inexistent")
+    if not session.scalar(select(Listing.id).where(Listing.property_id == drop_id).limit(1)):
+        raise LookupError("apartamentul a fost deja unit cu altul")
     moved = session.scalars(select(Listing).where(Listing.property_id == drop_id).order_by(Listing.first_seen)).all()
     for listing in moved:
         listing.property_id = keep_id
@@ -187,8 +189,8 @@ def merge_properties(session: Session, a: int, b: int) -> int:
         if listing.republished_from_id is None and (previous := find_republished_from(session, listing)):
             listing.republished_from_id = previous.id
     session.add(LabelEvent(property_id=keep_id, listing_id=moved[0].id if moved else None, action="merge"))
-    # Colecția veche a apartamentului șters ar pune property_id = NULL pe anunțurile mutate.
-    session.expire(drop, ["listings"])
-    session.delete(drop)
+    # Rândul apartamentului unit rămâne, fără anunțuri: interfața și sugestiile pornesc de la anunțuri, deci nu
+    # mai apare nicăieri. Nu-l ștergem, pentru că alte tabele pot avea chei străine spre el (de exemplu
+    # tabelul `alert` rămas în bazele de date de dinainte de renunțarea la notificări).
     session.flush()
     return keep_id
