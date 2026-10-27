@@ -11,7 +11,7 @@
   {% if files %}
   <div class="scroll">
   <table>
-    <thead><tr><th>Profil</th><th>Stare</th><th>Notificări</th><th>Platforme</th><th></th></tr></thead>
+    <thead><tr><th>Profil</th><th>Stare</th><th>Platforme</th><th></th></tr></thead>
     <tbody>
     {% for f in files %}
       <tr>
@@ -20,11 +20,9 @@
           <div class="small muted">{{ f.path.name }}</div></td>
         {% if f.profile %}
         <td>{% if f.profile.active %}<span class="tag good">activ</span>{% else %}<span class="tag">inactiv</span>{% endif %}</td>
-        <td class="small">{{ f.profile.notify.channels|join(", ") or "–" }}
-          {% if f.profile.notify.ntfy_topic or f.profile.notify.email_to %}<div class="muted">destinații proprii</div>{% endif %}</td>
         <td class="small">{% for name, s in f.profile.sources.items() %}{% if s.enabled %}{{ platform(name) }}{% if not loop.last %}, {% endif %}{% endif %}{% endfor %}</td>
         {% else %}
-        <td colspan="3"><span class="tag bad">invalid</span> <span class="small error">{{ f.error }}</span></td>
+        <td colspan="2"><span class="tag bad">invalid</span> <span class="small error">{{ f.error }}</span></td>
         {% endif %}
         <td class="nowrap small"><a href="/profiles/new?source={{ f.name }}">profil nou din acesta</a></td>
       </tr>

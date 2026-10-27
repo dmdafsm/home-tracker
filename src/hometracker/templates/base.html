@@ -80,13 +80,14 @@
                     padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--text); }
     .error { color: var(--bad); white-space: pre-wrap; }
     .notice { color: var(--good); }
+    .banner { background: var(--card); border: 1px solid var(--warn); border-radius: 10px; padding: 10px 14px; margin: 0 0 14px; }
     .empty { padding: 40px 16px; text-align: center; color: var(--muted); }
   </style>
 </head>
 <body>
   <header class="top">
     <h1><a href="/">home-tracker</a></h1>
-    <nav class="small"><a href="/">Apartamente</a> · <a href="/publishers">Publicatori</a> · <a href="/profiles">Profiluri</a></nav>
+    <nav class="small"><a href="/">Apartamente</a> · <a href="/publishers">Publicatori</a> · <a href="/profiles">Profiluri</a> · <a href="/status">Stare</a></nav>
     {% block header %}{% endblock %}
   </header>
   <main>{% block content %}{% endblock %}</main>

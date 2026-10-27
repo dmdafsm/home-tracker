@@ -20,7 +20,7 @@ def stats_by_name(sessions):
 
 
 def test_publishers_are_identified_by_phone_then_by_name(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], **OWNER), listing("storia", "s2", [7, 8, 9], area_m2=70)]
     catalog["olx"] = [listing("olx", "o1", [1, 2, 3], **{**OWNER, "publisher_name": "Maria"})]
     run()
@@ -33,7 +33,7 @@ def test_publishers_are_identified_by_phone_then_by_name(setup):
 
 
 def test_agency_declaration_wins(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], publisher_name="Ion", publisher_type="owner")]
     run()
     catalog["storia"] = [listing("storia", "s2", [7, 8, 9], area_m2=70, publisher_name="ion", publisher_type="agency")]
@@ -43,7 +43,7 @@ def test_agency_declaration_wins(setup):
 
 
 def test_taken_over_share_and_price_difference(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], **OWNER)]
     run()
     catalog["olx"] = [listing("olx", "o1", [1, 2, 3], price_eur=155000, **AGENCY)]
@@ -57,7 +57,7 @@ def test_taken_over_share_and_price_difference(setup):
 
 
 def test_owner_phone_on_many_apartments_looks_like_an_agent(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     # Suprafețe care se contrazic: apartamente diferite, același „proprietar”.
     areas = [40 + 10 * i for i in range(DISGUISED_AGENT_PROPERTIES)]
     catalog["storia"] = [listing("storia", f"s{i}", [], area_m2=area, **OWNER) for i, area in enumerate(areas)]
@@ -68,7 +68,7 @@ def test_owner_phone_on_many_apartments_looks_like_an_agent(setup):
 
 
 def test_existing_listings_are_linked_on_the_next_run(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], **OWNER)]
     run()
     with sessions() as session:
@@ -85,7 +85,7 @@ def test_existing_listings_are_linked_on_the_next_run(setup):
 
 @pytest.fixture
 def client(setup, tmp_path):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     profiles = tmp_path / "profiles"
     profiles.mkdir()
     (profiles / "test.yaml").write_text(yaml.safe_dump(PROFILE.model_dump(mode="json")), encoding="utf-8")

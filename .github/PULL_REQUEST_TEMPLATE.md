@@ -10,12 +10,11 @@ Architecture impact: existing pattern (owning module/table), or material change 
 | --- | --- |
 | `python3 scripts/verify.py` | Passed / failed / not run, with reason |
 | Real-page check (`hometracker dump`, worker run, spot check) | Result or not applicable, with reason |
-| Notification check (`hometracker test-notify`) | Result or not applicable, with reason |
 | Web interface browser check | Result or not applicable, with reason |
 
 ## Data and platform impact
 
-Affected platforms, terms and request volume; schema changes (additive or migration/rebuild procedure); alert and dedup behavior; personal data and network exposure. Use "not applicable" with a reason when appropriate.
+Affected platforms, terms and request volume; schema changes (additive or migration/rebuild procedure); dedup and feed behavior; personal data and network exposure. Use "not applicable" with a reason when appropriate.
 
 ## Review notes
 

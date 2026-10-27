@@ -16,7 +16,8 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from .dedup import NEAR_METERS, Candidate, contradiction, distance_m, find_republished_from
-from .models import Alert, DistinctProperties, LabelEvent, Listing, Property, PropertyLabel, utcnow
+from .formatting import floor_label, format_price
+from .models import DistinctProperties, LabelEvent, Listing, Property, PropertyLabel, utcnow
 
 # Suprafața: aceeași toleranță ca pragul de contradicție din dedup (61 m² utili / 65 m² construiți).
 AREA_TOLERANCE_M2 = 5
@@ -76,7 +77,6 @@ def _compare(own: list[Listing], other: list[Listing]) -> tuple[tuple[str, ...],
     distances = [d for a in mine for b in theirs if (d := distance_m(a, b)) is not None]
     if distances and min(distances) > NEAR_METERS:
         return None
-    from .notify import floor_label, format_price  # notify importă config; evităm ciclul la import
 
     areas = sorted(areas_a | areas_b)
     reasons = [
@@ -144,10 +144,7 @@ def mark_distinct(session: Session, a: int, b: int) -> None:
 
 
 def merge_properties(session: Session, a: int, b: int) -> int:
-    """„E același apartament”: mută anunțurile, alertele și etichetele în apartamentul mai vechi.
-
-    Alertele trimise merg cu apartamentul, ca unirea să nu trimită din nou alerta „nou”.
-    """
+    """„E același apartament”: mută anunțurile și etichetele în apartamentul mai vechi."""
     if a == b:
         raise ValueError("același apartament")
     keep_id, drop_id = _pair(a, b)
@@ -159,8 +156,6 @@ def merge_properties(session: Session, a: int, b: int) -> int:
         listing.property_id = keep_id
         listing.match_reason, listing.match_signals, listing.match_score = "manual", None, None
         listing.matched_listing_id, listing.shared_photos = None, 0
-    for alert in session.scalars(select(Alert).where(Alert.property_id == drop_id)):
-        alert.property_id = keep_id
     kept_label, dropped_label = session.get(PropertyLabel, keep_id), session.get(PropertyLabel, drop_id)
     if dropped_label is not None:
         if kept_label is None:

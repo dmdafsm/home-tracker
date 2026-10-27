@@ -12,7 +12,7 @@ Run `python3 scripts/install_hooks.py` once per clone, then work on a `<type>/<t
 4. Run focused checks while working (`uv run pytest tests/test_x.py`), then `python3 scripts/verify.py`. See [testing and verification](docs/engineering/testing-and-verification.md).
 5. Review the diff and follow [code review](docs/engineering/code-review.md). Open a PR only when asked, using the template.
 
-Identifiers are in English. Comments, docstrings, CLI messages, notifications and interface text are Romanian, matching the existing modules. Engineering documentation under `docs/engineering/` is in English. Keep one language per file.
+Identifiers are in English. Comments, docstrings, CLI messages and interface text are Romanian, matching the existing modules. Engineering documentation under `docs/engineering/` is in English. Keep one language per file.
 
 ## Toolchain
 
@@ -25,12 +25,12 @@ Identifiers are in English. Comments, docstrings, CLI messages, notifications an
 
 Add dependencies with `uv add` (or `uv add --dev`) and commit `uv.lock`. The verifier syncs in locked mode, so a stale lockfile fails. The Docker image installs from the same lockfile.
 
-Before adding a dependency, check its documentation, license and maintenance, and record the reason in the PR. Use [the decision template](docs/engineering/decisions/template.md) for a material architecture, platform or security tradeoff (a new container, PostGIS/pgvector, Playwright, a new notification channel, exposing a new hostname).
+Before adding a dependency, check its documentation, license and maintenance, and record the reason in the PR. Use [the decision template](docs/engineering/decisions/template.md) for a material architecture, platform or security tradeoff (a new container, PostGIS/pgvector, Playwright, exposing a new hostname).
 
 ## Definition of done
 
 - The named behavior works, with evidence appropriate to its risk; adapter changes are checked on a real page.
-- Idempotent collection, one alert per apartment, polite platform access and local-only personal data are preserved where affected.
+- Idempotent collection, one card per apartment, polite platform access and local-only personal data are preserved where affected.
 - Formatting, lint and tests pass. Skipped or unavailable checks are listed as such.
 - Schema changes are additive and work on an existing database (see [coding standards](docs/engineering/coding-standards.md#database-and-schema)), or come with a rebuild procedure.
 - Docs, README, `.env.example` and `uv.lock` match the implementation. No secrets, collected data, unrelated changes or fabricated completion claims.

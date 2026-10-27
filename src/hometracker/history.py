@@ -10,8 +10,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .config import Settings
+from .formatting import PLATFORM_NAMES, floor_label, format_price
 from .models import Listing, ListingSnapshot, as_utc, utcnow
-from .notify import PLATFORM_NAMES, floor_label, format_price
 
 PUBLISHER_TYPES = {"owner": "proprietar", "agency": "agenție"}
 

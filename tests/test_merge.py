@@ -8,7 +8,7 @@ from helpers import PROFILE, listing
 from hometracker.config import Settings
 from hometracker.labels import apply_label, split_listing
 from hometracker.merge import mark_distinct, merge_properties, possible_duplicates
-from hometracker.models import Alert, DistinctProperties, LabelEvent, Listing, Property, PropertyLabel
+from hometracker.models import DistinctProperties, LabelEvent, Listing, Property, PropertyLabel
 from hometracker.web import create_app
 
 HERE = {"latitude": 46.76341, "longitude": 23.616245}
@@ -28,20 +28,20 @@ def properties(sessions):
 
 @pytest.fixture
 def three_agencies(setup):
-    catalog, notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         agency("a", [1, 2, 3], "Agenția A", area_m2=61, price_eur=165000, **HERE),
         agency("b", [4, 5, 6], "Agenția B", area_m2=61, price_eur=164900, **HERE),
         agency("c", [7, 8, 9], "Agenția C", area_m2=65, price_eur=164900, latitude=46.7629, longitude=23.6138),
     ]
     run()
-    return catalog, notifier, sessions, run
+    return catalog, sessions, run
 
 
 def test_compatible_apartments_are_suggested_not_merged(three_agencies):
-    _catalog, notifier, sessions, _run = three_agencies
+    _catalog, sessions, _run = three_agencies
     ids = properties(sessions)
-    assert len(set(ids.values())) == 3 and len(notifier.alerts) == 3
+    assert len(set(ids.values())) == 3
     with sessions() as session:
         found = possible_duplicates(session)
         assert [s.property_id for s in found[ids["a"]]] == [ids["b"], ids["c"]]  # b e la 0 m, c la ~70 m
@@ -62,7 +62,7 @@ def test_compatible_apartments_are_suggested_not_merged(three_agencies):
     ],
 )
 def test_incompatible_apartments_are_not_suggested(setup, other):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         agency("a", [1, 2, 3], "Agenția A", area_m2=61, price_eur=165000, **HERE),
         agency("b", [4, 5, 6], "Agenția B", **{"area_m2": 61, "price_eur": 164900, **HERE, **other}),
@@ -72,8 +72,8 @@ def test_incompatible_apartments_are_not_suggested(setup, other):
         assert possible_duplicates(session) == {}
 
 
-def test_merge_moves_listings_alerts_and_labels(three_agencies):
-    _catalog, notifier, sessions, run = three_agencies
+def test_merge_moves_listings_and_labels(three_agencies):
+    _catalog, sessions, _run = three_agencies
     ids = properties(sessions)
     with sessions() as session:
         apply_label(session, ids["b"], "save")
@@ -85,18 +85,14 @@ def test_merge_moves_listings_alerts_and_labels(three_agencies):
         assert session.get(Property, ids["b"]) is None
         moved = session.query(Listing).filter_by(external_id="b").one()
         assert (moved.property_id, moved.match_reason) == (kept, "manual")
-        assert session.query(Alert).filter_by(property_id=kept, kind="new").count() == 2
         label = session.get(PropertyLabel, kept)
         assert (label.saved, label.verdict) == (True, "real")
         assert session.query(LabelEvent).filter_by(action="merge").count() == 1
         assert {s.property_id for s in possible_duplicates(session)[kept]} == {ids["c"]}
-    sent = len(notifier.alerts)
-    run()
-    assert len(notifier.alerts) == sent  # unirea nu trimite din nou alerta „nou”
 
 
 def test_not_the_same_stops_the_suggestion(three_agencies):
-    _catalog, _notifier, sessions, _run = three_agencies
+    _catalog, sessions, _run = three_agencies
     ids = properties(sessions)
     with sessions() as session:
         mark_distinct(session, ids["c"], ids["a"])
@@ -115,7 +111,7 @@ def test_not_the_same_stops_the_suggestion(three_agencies):
 
 
 def test_split_is_remembered_as_not_the_same(three_agencies):
-    _catalog, _notifier, sessions, _run = three_agencies
+    _catalog, sessions, _run = three_agencies
     ids = properties(sessions)
     with sessions() as session:
         kept = merge_properties(session, ids["a"], ids["b"])
@@ -128,7 +124,7 @@ def test_split_is_remembered_as_not_the_same(three_agencies):
 
 @pytest.fixture
 def web(three_agencies, tmp_path):
-    _catalog, _notifier, sessions, _run = three_agencies
+    _catalog, sessions, _run = three_agencies
     profiles = tmp_path / "profiles"
     profiles.mkdir()
     (profiles / "test.yaml").write_text(yaml.safe_dump(PROFILE.model_dump(mode="json")), encoding="utf-8")

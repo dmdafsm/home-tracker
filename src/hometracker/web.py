@@ -19,15 +19,16 @@ from . import profile_editor
 from .authenticity import Assessment, Context, assess
 from .buildyear import YearEstimate, estimate_for
 from .config import Settings
+from .formatting import PLATFORM_NAMES, floor_label, format_price
 from .history import PropertyHistory, match_label, property_history, publisher_label
 from .labels import ACTIONS, apply_label, label_for, labels_for, split_listing
 from .merge import Suggestion, mark_distinct, merge_properties, possible_duplicates
-from .models import Alert, Listing, Photo, PropertyLabel, as_utc, init_db, make_engine, utcnow
-from .notify import PLATFORM_NAMES, floor_label, format_price
+from .models import Listing, Photo, PropertyLabel, as_utc, init_db, make_engine, utcnow
 from .photos import image_path
 from .pipeline import listing_to_data
 from .profiles import MatchResult, Profile, load_profiles, match
 from .publishers import DISGUISED_AGENT_PROPERTIES, publisher_stats
+from .status import collection_status
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -43,7 +44,6 @@ class FeedItem:
     listing: Listing  # anunțul cu scorul cel mai bun pentru profil
     result: MatchResult
     photo_id: int | None
-    alerted: bool
     assessment: Assessment
     label: PropertyLabel | None
     year: YearEstimate | None
@@ -59,9 +59,6 @@ def feed(
 ) -> list[FeedItem]:
     """Apartamentele cu cel puțin un anunț care trece de filtrele profilului, după scor."""
     property_ids = session.scalars(select(Listing.property_id).where(Listing.property_id.is_not(None)).distinct())
-    alerted = set(
-        session.scalars(select(Alert.property_id).where(Alert.profile == profile.name, Alert.kind == "new")).all()
-    )
     context = Context.build(session)
     ids = property_ids.all()
     labels = labels_for(session, ids)
@@ -88,7 +85,6 @@ def feed(
                 listing,
                 result,
                 _first_photo_id(session, history),
-                property_id in alerted,
                 assess(history, context),
                 label,
                 estimate_for(session, history.listings),
@@ -173,10 +169,14 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
     def day(value: datetime | None) -> str:
         return as_utc(value).astimezone(zone).strftime("%d.%m.%Y") if value else "–"
 
+    def moment(value: datetime | None) -> str:
+        return as_utc(value).astimezone(zone).strftime("%d.%m.%Y %H:%M") if value else "–"
+
     TEMPLATES.env.globals.update(
         price=format_price,
         floor=floor_label,
         day=day,
+        moment=moment,
         platform=lambda name: PLATFORM_NAMES.get(name, name),
         publisher=publisher_label,
         match_label=match_label,
@@ -212,8 +212,16 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                     "removed": removed,
                     "hidden": hidden,
                     "saved": saved,
+                    "problems": [s for s in collection_status(session, available, settings) if s.problem],
                     "now": utcnow(),
                 },
+            )
+
+    @app.get("/status", response_class=HTMLResponse)
+    def status_page(request: Request):
+        with sessions() as session:
+            return TEMPLATES.TemplateResponse(
+                request, "status.html", {"platforms": collection_status(session, profiles(), settings)}
             )
 
     @app.get("/property/{property_id}", response_class=HTMLResponse)

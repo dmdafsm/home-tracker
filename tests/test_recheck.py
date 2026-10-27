@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 
 from hometracker.adapters import ListingRemoved
 from hometracker.http import BlockedError
-from hometracker.models import Alert, Listing, ListingSnapshot, add_missing_columns, init_db, make_engine, utcnow
+from hometracker.models import Listing, ListingSnapshot, add_missing_columns, init_db, make_engine, utcnow
 
 
 def age(sessions, days=2, **filters):
@@ -27,52 +27,51 @@ def http_error(status: int) -> httpx.HTTPStatusError:
     return httpx.HTTPStatusError("eroare", request=request, response=httpx.Response(status, request=request))
 
 
-def matched_and_left_search(catalog, notifier, sessions, run, **kwargs):
-    """Un anunț potrivit, alertat, care apoi nu mai apare în primele pagini de căutare."""
+def matched_and_left_search(catalog, sessions, run, **kwargs):
+    """Un anunț potrivit, grupat, care apoi nu mai apare în primele pagini de căutare."""
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], **kwargs)]
     run()
-    assert len(notifier.alerts) == 1
+    with sessions() as session:
+        assert session.query(Listing).one().property_id is not None
     catalog["storia"] = []
     age(sessions)
     run.calls.clear()
 
 
-def test_price_drop_found_by_recheck_alerts(setup):
-    catalog, notifier, sessions, run = setup
-    matched_and_left_search(catalog, notifier, sessions, run)
+def test_price_change_found_by_recheck(setup):
+    catalog, sessions, run = setup
+    matched_and_left_search(catalog, sessions, run)
     run.details["s1"] = listing("storia", "s1", [1, 2, 3], price_eur=140000)
     stats = run()
     assert run.calls == ["s1"]
     assert stats.rechecked == 1 and stats.removed == 0
-    assert notifier.alerts[-1].title.startswith("Preț scăzut cu 7% · 140.000 €")
     with sessions() as session:
         row = session.query(Listing).one()
         assert row.active and row.checked_at is not None and row.price_eur == 140000
         assert [s.price_eur for s in session.query(ListingSnapshot).order_by(ListingSnapshot.id)] == [150000, 140000]
 
 
-def test_404_marks_listing_removed_without_alert(setup):
-    catalog, notifier, sessions, run = setup
-    matched_and_left_search(catalog, notifier, sessions, run)
+def test_404_marks_listing_removed(setup):
+    catalog, sessions, run = setup
+    matched_and_left_search(catalog, sessions, run)
     run.details["s1"] = http_error(404)
     stats = run()
     assert stats.removed == 1
-    assert len(notifier.alerts) == 1  # dispariția intră în rezumatul zilnic, nu în alertele instant
     with sessions() as session:
         row = session.query(Listing).one()
         assert not row.active and row.removed_at is not None
 
 
 def test_adapter_removed_page_marks_listing_removed(setup):
-    catalog, notifier, sessions, run = setup
-    matched_and_left_search(catalog, notifier, sessions, run)
+    catalog, sessions, run = setup
+    matched_and_left_search(catalog, sessions, run)
     run.details["s1"] = ListingRemoved("https://storia.test/s1")
     assert run().removed == 1
 
 
 def test_server_error_keeps_listing_active_and_retries_next_day(setup):
-    catalog, notifier, sessions, run = setup
-    matched_and_left_search(catalog, notifier, sessions, run)
+    catalog, sessions, run = setup
+    matched_and_left_search(catalog, sessions, run)
     run.details["s1"] = http_error(500)
     stats = run()
     assert stats.removed == 0 and stats.rechecked == 0
@@ -86,7 +85,7 @@ def test_server_error_keeps_listing_active_and_retries_next_day(setup):
 
 
 def test_listing_still_in_search_is_not_rechecked(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
     run()
     run.calls.clear()
@@ -96,15 +95,15 @@ def test_listing_still_in_search_is_not_rechecked(setup):
 
 
 def test_recheck_once_per_day(setup):
-    catalog, notifier, sessions, run = setup
-    matched_and_left_search(catalog, notifier, sessions, run)
+    catalog, sessions, run = setup
+    matched_and_left_search(catalog, sessions, run)
     run()
     run()
     assert run.calls == ["s1"]
 
 
 def test_non_matching_listings_are_not_rechecked(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], floor="4")]
     run()
     catalog["storia"] = []
@@ -115,7 +114,7 @@ def test_non_matching_listings_are_not_rechecked(setup):
 
 
 def test_recheck_per_run_limit(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         listing("storia", "s1", [1, 2, 3]),
         listing("storia", "s2", [4, 5, 6], price_eur=151000),
@@ -131,7 +130,7 @@ def test_recheck_per_run_limit(setup):
 
 
 def test_block_stops_recheck_on_that_platform(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3]), listing("storia", "s2", [4, 5, 6], price_eur=151000)]
     run()
     catalog["storia"] = []
@@ -147,8 +146,8 @@ def test_block_stops_recheck_on_that_platform(setup):
 
 
 def test_removed_listing_back_in_search_is_active_again(setup):
-    catalog, notifier, sessions, run = setup
-    matched_and_left_search(catalog, notifier, sessions, run)
+    catalog, sessions, run = setup
+    matched_and_left_search(catalog, sessions, run)
     run.details["s1"] = http_error(410)
     run()
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
@@ -156,7 +155,7 @@ def test_removed_listing_back_in_search_is_active_again(setup):
     with sessions() as session:
         row = session.query(Listing).one()
         assert row.active and row.removed_at is None
-        assert session.query(Alert).count() == 1  # aceeași proprietate, fără o nouă alertă
+        assert row.property_id is not None  # același apartament
 
 
 def test_missing_columns_are_added_to_an_existing_database(tmp_path):

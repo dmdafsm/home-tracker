@@ -1,13 +1,12 @@
-"""Istoricul apartamentului: motivul legării, republicări, zile pe piață, prețuri și rezumatul zilnic."""
+"""Istoricul apartamentului: motivul legării, republicări, zile pe piață, prețuri."""
 
 from datetime import UTC, datetime, timedelta
 
-from helpers import PROFILE, listing
+from helpers import listing
 
 from hometracker.config import Settings
 from hometracker.history import find_property_id, format_history, property_history
 from hometracker.models import Listing
-from hometracker.summary import build_summary, format_summary
 
 NOW = datetime(2026, 10, 27, 18, 30, tzinfo=UTC)
 
@@ -18,7 +17,7 @@ def rows(sessions):
 
 
 def test_match_reason_is_recorded(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
     catalog["olx"] = [listing("olx", "o1", [2, 3, 4])]
     run()
@@ -31,7 +30,7 @@ def test_match_reason_is_recorded(setup):
 
 
 def test_same_publisher_reposting_under_a_new_id_is_a_republication(setup):
-    catalog, notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], publisher_name="Agenția Exemplu")]
     run()
     catalog["storia"] = [listing("storia", "s2", [1, 2, 3], publisher_name="  agenția   exemplu ")]
@@ -39,11 +38,10 @@ def test_same_publisher_reposting_under_a_new_id_is_a_republication(setup):
     found = rows(sessions)
     assert found["s2"].property_id == found["s1"].property_id
     assert found["s2"].republished_from_id == found["s1"].id
-    assert len(notifier.alerts) == 1  # republicarea nu e un apartament nou
 
 
 def test_other_or_unknown_publishers_are_not_republications(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3], publisher_name="Proprietar Exemplu")]
     run()
     catalog["storia"] = [
@@ -58,7 +56,7 @@ def test_other_or_unknown_publishers_are_not_republications(setup):
 
 
 def test_history_timeline_prices_and_days_on_market(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         listing("storia", "s1", [1, 2, 3], publisher_name="Proprietar Exemplu", publisher_type="owner")
     ]
@@ -88,7 +86,7 @@ def test_history_timeline_prices_and_days_on_market(setup):
 
 
 def test_days_on_market_stop_when_every_listing_is_gone(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
     run()
     with sessions() as session:
@@ -100,7 +98,7 @@ def test_days_on_market_stop_when_every_listing_is_gone(setup):
 
 
 def test_find_property_by_id_or_listing_url(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
     run()
     with sessions() as session:
@@ -108,18 +106,3 @@ def test_find_property_by_id_or_listing_url(setup):
         assert find_property_id(session, str(row.property_id)) == row.property_id
         assert find_property_id(session, row.url + "?utm=x") == row.property_id
         assert find_property_id(session, "https://storia.test/missing") is None
-
-
-def test_daily_summary_lists_republications(setup):
-    catalog, _notifier, sessions, run = setup
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3], publisher_name="Agenția Exemplu")]
-    run()
-    catalog["storia"] = [listing("storia", "s2", [1, 2, 3], publisher_name="Agenția Exemplu")]
-    run()
-    with sessions() as session:
-        now = datetime.now(UTC)
-        summary = build_summary(session, PROFILE, now - timedelta(hours=1), now + timedelta(minutes=1), Settings())
-        assert [item.external_id for item in summary.republished] == ["s2"]
-        message = format_summary(summary, Settings())
-    assert message.title.endswith(", 1 republicate")
-    assert "Republicate sub un id nou (1):" in message.body

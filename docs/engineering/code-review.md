@@ -8,7 +8,7 @@ In Claude Code, run `/code-review` on the uncommitted changes or the branch diff
 
 - matching: hard filters vs preferences, unknown values, price conversion, floor interpretation;
 - dedup: false merges (shared façade or stock photos), missed merges, threshold changes;
-- alerts: duplicates across platforms and reruns, lost alerts, price-drop rules, warning spam;
+- the feed: one apartment shown several times, a matching apartment missing, collection problems not shown on the status page;
 - collection: idempotent reruns, request rate per platform, behavior when a page changes shape or a challenge appears;
 - personal data, network exposure and the personal-use constraint ([security and data](security-and-data.md)).
 

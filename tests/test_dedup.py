@@ -102,7 +102,7 @@ def test_known_contradictions_veto_the_pair():
 
 
 def test_two_shared_photos_merge_without_any_attribute(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,
@@ -114,7 +114,7 @@ def test_two_shared_photos_merge_without_any_attribute(setup):
 
 
 def test_one_shared_photo_needs_area_and_floor(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,
@@ -132,7 +132,7 @@ NEXT_DOOR = {"latitude": 46.7705, "longitude": 23.6204}  # ~60 m
 
 
 def test_rewritten_text_merges_without_photos_when_the_location_confirms(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,
@@ -149,7 +149,7 @@ def test_rewritten_text_merges_without_photos_when_the_location_confirms(setup):
 
 
 def test_rewritten_text_alone_is_not_enough(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,
@@ -161,7 +161,7 @@ def test_rewritten_text_alone_is_not_enough(setup):
 
 
 def test_similar_text_on_another_floor_stays_separate(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,
@@ -173,7 +173,7 @@ def test_similar_text_on_another_floor_stays_separate(setup):
 
 
 def test_agency_template_text_does_not_merge_different_apartments(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     # Același șablon la mai multe anunțuri decât COMMON_SHINGLE_LISTINGS, cu același tip de apartament.
     items = [
         listing("storia", f"s{i}", [], description=TEMPLATE + f"Apartament numarul {i}.", rooms=2)
@@ -184,7 +184,7 @@ def test_agency_template_text_does_not_merge_different_apartments(setup):
 
 
 def test_agency_phone_does_not_identify_an_apartment(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     agency = {"publisher_type": "agency", "phone": "0722 000 111", "rooms": 2}
     run_one_by_one(
         catalog,
@@ -197,7 +197,7 @@ def test_agency_phone_does_not_identify_an_apartment(setup):
 
 
 def test_owner_phone_confirms_a_rewritten_text(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     owner = {"publisher_type": "owner", "phone": "0722 000 222", "rooms": 2}
     run_one_by_one(
         catalog,
@@ -210,7 +210,7 @@ def test_owner_phone_confirms_a_rewritten_text(setup):
 
 
 def test_shared_photos_far_apart_stay_separate(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,
@@ -222,7 +222,7 @@ def test_shared_photos_far_apart_stay_separate(setup):
 
 
 def test_best_scoring_apartment_wins(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     run_one_by_one(
         catalog,
         run,

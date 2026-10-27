@@ -1,4 +1,4 @@
-"""Linia de comandă: `hometracker loop | run | summary | property | web | demo | dump | test-notify | matches`."""
+"""Linia de comandă: `hometracker loop | run | property | web | demo | dump`."""
 
 from __future__ import annotations
 
@@ -7,22 +7,18 @@ import logging
 import random
 import sys
 import time
-from dataclasses import replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from urllib.parse import urlparse
-
-from sqlalchemy import select
 
 from .adapters import ADAPTERS
 from .buildyear import estimate_for
 from .config import Settings, load_settings
+from .formatting import floor_label, format_price
 from .history import find_property_id, format_history, property_history
 from .http import PoliteClient
-from .models import Alert, Listing, init_db, make_engine, utcnow
-from .notify import Message, Notifier, floor_label, format_price
+from .models import init_db, make_engine
 from .pipeline import Pipeline
 from .profiles import load_profiles
-from .summary import build_summary, due_period, format_summary, send_due_summaries, send_summary
 
 log = logging.getLogger("hometracker")
 
@@ -53,13 +49,12 @@ def _run_once(settings: Settings, sessions, *, catchup: bool, profile_name: str 
         return
     pages = settings.pages_catchup if catchup else settings.pages_normal
     with PoliteClient(settings) as client:
-        stats = Pipeline(settings, sessions, client, Notifier(settings)).run(profiles, pages)
+        stats = Pipeline(settings, sessions, client).run(profiles, pages)
     log.info(
-        "rulare %s gata: %d văzute, %d noi, %d alerte, %d reverificate (%d dispărute)%s",
+        "rulare %s gata: %d văzute, %d noi, %d reverificate (%d dispărute)%s",
         "de recuperare" if catchup else "normală",
         stats.found,
         stats.new,
-        stats.alerts,
         stats.rechecked,
         stats.removed,
         f", erori: {'; '.join(stats.errors)}" if stats.errors else "",
@@ -79,10 +74,6 @@ def cmd_loop(args: argparse.Namespace) -> None:
             _run_once(settings, sessions, catchup=catchup, profile_name=None)
         except Exception:
             log.exception("rularea a eșuat; reîncerc la următorul interval")
-        try:
-            send_due_summaries(sessions, load_profiles(settings.profiles_dir), Notifier(settings), settings)
-        except Exception:
-            log.exception("rezumatul zilnic a eșuat; reîncerc la următorul interval")
         last_run = now
         wait = random.uniform(settings.interval_min_minutes, settings.interval_max_minutes) * 60
         target = time.time() + wait
@@ -96,28 +87,6 @@ def cmd_run(args: argparse.Namespace) -> None:
     settings = load_settings()
     sessions = _setup(settings)
     _run_once(settings, sessions, catchup=args.catchup, profile_name=args.profile)
-
-
-def cmd_summary(args: argparse.Namespace) -> None:
-    """Rezumatul de acum: perioada de la ultimul rezumat trimis (sau ultimele 24 de ore) până acum."""
-    settings = load_settings()
-    sessions = _setup(settings)
-    profiles = [p for p in load_profiles(settings.profiles_dir) if not args.profile or p.name == args.profile]
-    # Ora din SUMMARY_HOUR nu contează aici: comanda e pornită de mână.
-    now_settings = replace(settings, summary_hour=0)
-    for profile in profiles:
-        with sessions() as session:
-            period = due_period(session, profile, utcnow(), now_settings)
-            if period is None or args.print:
-                period = period or (utcnow() - timedelta(hours=24), utcnow())
-            if args.print:
-                message = format_summary(build_summary(session, profile, *period, settings), settings)
-                print(f"{message.title}\n\n{message.body}\n")
-                continue
-        if period is None:
-            print(f"{profile.name}: rezumatul de azi a fost deja trimis")
-        elif not send_summary(sessions, profile, Notifier(settings), settings, *period):
-            print(f"{profile.name}: rezumatul nu a putut fi trimis (canale configurate?)")
 
 
 def cmd_property(args: argparse.Namespace) -> None:
@@ -200,42 +169,6 @@ def cmd_dump(args: argparse.Namespace) -> None:
         print("\nadapterul nu a găsit nimic: structura paginii trebuie verificată.")
 
 
-def cmd_test_notify(args: argparse.Namespace) -> None:
-    settings = load_settings()
-    logging.basicConfig(level=logging.INFO)
-    channels = args.channels or ["ntfy", "email"]
-    destinations = {}
-    if args.profile:
-        profile = next((p for p in load_profiles(settings.profiles_dir) if p.name == args.profile), None)
-        if profile is None:
-            sys.exit(f"profil necunoscut sau inactiv: {args.profile}")
-        destinations = profile.notify.destinations()
-    delivered = Notifier(settings).send(
-        Message(title="home-tracker: test", body="Notificările funcționează.", tags=["white_check_mark"]),
-        channels,
-        **destinations,
-    )
-    print("livrat pe: " + (", ".join(delivered) or "niciun canal"))
-
-
-def cmd_matches(args: argparse.Namespace) -> None:
-    """Ultimele apartamente pentru care s-au trimis alerte."""
-    settings = load_settings()
-    sessions = _setup(settings)
-    with sessions() as session:
-        rows = session.execute(
-            select(Alert, Listing)
-            .join(Listing, Alert.listing_id == Listing.id)
-            .order_by(Alert.sent_at.desc())
-            .limit(args.limit)
-        ).all()
-        for alert, listing in rows:
-            print(
-                f"{alert.sent_at:%d.%m %H:%M}  {alert.kind:<10} {format_price(listing.price_eur):>12}  "
-                f"{floor_label(listing.floor):<14} {listing.platform:<10} {listing.url}"
-            )
-
-
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="hometracker", description="Tracker de piață imobiliară")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -247,16 +180,11 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--profile", help="doar acest profil")
     run.set_defaults(func=cmd_run)
 
-    summary = sub.add_parser("summary", help="trimite rezumatul zilnic acum")
-    summary.add_argument("--profile", help="doar acest profil")
-    summary.add_argument("--print", action="store_true", help="doar afișează ultimele 24 de ore, fără să trimită")
-    summary.set_defaults(func=cmd_summary)
-
     prop = sub.add_parser("property", help="istoricul unui apartament")
     prop.add_argument("reference", help="id-ul apartamentului sau URL-ul unui anunț")
     prop.set_defaults(func=cmd_property)
 
-    web = sub.add_parser("web", help="interfața web (doar citire)")
+    web = sub.add_parser("web", help="interfața web")
     web.add_argument("--host", default="127.0.0.1")
     web.add_argument("--port", type=int, default=8080)
     web.set_defaults(func=cmd_web)
@@ -268,15 +196,6 @@ def main(argv: list[str] | None = None) -> None:
     dump = sub.add_parser("dump", help="salvează o pagină și arată ce extrage adapterul")
     dump.add_argument("url")
     dump.set_defaults(func=cmd_dump)
-
-    test = sub.add_parser("test-notify", help="trimite o notificare de test")
-    test.add_argument("channels", nargs="*", choices=["ntfy", "email"])
-    test.add_argument("--profile", help="trimite la destinațiile profilului (notify.ntfy_topic, notify.email_to)")
-    test.set_defaults(func=cmd_test_notify)
-
-    matches = sub.add_parser("matches", help="ultimele alerte trimise")
-    matches.add_argument("--limit", type=int, default=20)
-    matches.set_defaults(func=cmd_matches)
 
     args = parser.parse_args(argv)
     args.func(args)

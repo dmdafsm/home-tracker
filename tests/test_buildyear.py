@@ -108,7 +108,7 @@ def test_same_block_uses_coordinates():
 
 
 def test_estimate_for_reads_neighbours_and_the_osm_cache(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     here = {"latitude": 46.77000, "longitude": 23.62000}
     catalog["storia"] = [
         listing("storia", "s1", [1, 2, 3], **here),
@@ -186,7 +186,7 @@ class FakeOverpass:
 
 
 def test_lookup_caches_results_including_nothing_found(setup):
-    _catalog, _notifier, sessions, _run = setup
+    _catalog, sessions, _run = setup
     client = FakeOverpass([OVERPASS, {"elements": []}])
     with sessions() as session:
         found = lookup(session, client, "https://overpass.test/api", 46.770001, 23.620004)
@@ -200,7 +200,7 @@ def test_lookup_caches_results_including_nothing_found(setup):
 
 
 def test_pending_locations_skip_cached_and_respect_the_limit(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         listing("storia", f"s{i}", [], area_m2=40 + 10 * i, latitude=46.77 + i / 100, longitude=23.62) for i in range(4)
     ]
@@ -218,13 +218,13 @@ def test_pipeline_stops_osm_lookups_when_overpass_refuses(setup):
     from hometracker.config import Settings
     from hometracker.pipeline import Pipeline, RunStats
 
-    catalog, notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         listing("storia", f"s{i}", [], area_m2=40 + 10 * i, latitude=46.77 + i / 100, longitude=23.62) for i in range(3)
     ]
     run()
     client = FakeOverpass([OVERPASS, BlockedError("prea multe cereri")])
-    pipeline = Pipeline(Settings(osm_lookups_per_run=5), sessions, client, notifier, adapters={})
+    pipeline = Pipeline(Settings(osm_lookups_per_run=5), sessions, client, adapters={})
     pipeline._osm_lookups(RunStats())
     assert len(client.urls) == 2  # a doua a fost refuzată, a treia nu s-a mai cerut
     with sessions() as session:

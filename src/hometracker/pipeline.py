@@ -1,24 +1,21 @@
-"""O rulare: caută pe fiecare platformă, salvează, grupează pe apartamente, notifică."""
+"""O rulare: caută pe fiecare platformă, salvează și grupează anunțurile pe apartamente."""
 
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import httpx
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from .adapters import ADAPTERS, Adapter, ListingRemoved
-from .authenticity import Assessment, Context, assess
 from .config import Settings
 from .dedup import assign_property
-from .history import property_history
+from .formatting import PLATFORM_NAMES
 from .http import BlockedError, PoliteClient
-from .labels import label_for
-from .models import Alert, Listing, ListingSnapshot, Photo, RunLog, utcnow
-from .notify import PLATFORM_NAMES, Message, Notifier, floor_label, format_price
+from .models import Listing, ListingSnapshot, Photo, RunLog, utcnow
 from .osm import lookup as osm_lookup
 from .osm import pending_locations
 from .parsing import phone_hash
@@ -48,14 +45,12 @@ _COPIED_FIELDS = (
     "publisher_type",
     "posted_at",
 )
-WARNING_COOLDOWN = timedelta(hours=12)
 
 
 @dataclass
 class RunStats:
     found: int = 0
     new: int = 0
-    alerts: int = 0
     rechecked: int = 0
     removed: int = 0
     errors: list[str] = field(default_factory=list)
@@ -68,13 +63,11 @@ class Pipeline:
         settings: Settings,
         sessions: sessionmaker,
         client: PoliteClient,
-        notifier: Notifier,
         adapters: dict[str, type[Adapter]] | None = None,
     ) -> None:
         self.settings = settings
         self.sessions = sessions
         self.client = client
-        self.notifier = notifier
         self.adapters = adapters or ADAPTERS
 
     # ------------------------------------------------------------------ rulare
@@ -139,18 +132,13 @@ class Pipeline:
             session.commit()
             stats.found += run.found
             stats.new += run.new
+            # Problemele rămân în run_log; interfața le arată pe pagina de stare (/status).
             if run.error:
                 stats.errors.append(f"{adapter.name}: {run.error}")
-                self._warn(
-                    session, profile, adapter.name, f"{PLATFORM_NAMES.get(adapter.name, adapter.name)}: {run.error}"
-                )
             elif run.found == 0:
-                self._warn(
-                    session,
-                    profile,
-                    adapter.name,
-                    f"{PLATFORM_NAMES.get(adapter.name, adapter.name)} nu a întors niciun anunț. "
-                    "Probabil s-a schimbat structura paginii sau URL-ul de căutare.",
+                log.warning(
+                    "%s nu a întors niciun anunț: probabil s-a schimbat structura paginii sau URL-ul de căutare",
+                    PLATFORM_NAMES.get(adapter.name, adapter.name),
                 )
 
     # --------------------------------------------------------------- un anunț
@@ -173,11 +161,11 @@ class Pipeline:
             session.add(ListingSnapshot(listing=listing, price_eur=listing.price_eur))
             photo_urls = item.photo_urls
         else:
-            self._update_existing(session, profile, listing, item, stats)
-            if listing.property_id is not None and self._already_alerted(session, profile, listing.property_id, "new"):
-                return False
-            # Anunț cunoscut, încă neanunțat pentru acest profil: poate a scăzut prețul în interval,
-            # sau profilul e nou. Îl reevaluăm cu datele salvate.
+            self._refresh(session, listing, item)
+            if listing.property_id is not None:
+                return False  # deja grupat: interfața îl evaluează pentru fiecare profil
+            # Anunț cunoscut care nu trecuse de profil: poate a scăzut prețul în interval, sau profilul
+            # s-a schimbat. Îl reevaluăm cu datele salvate.
             data = listing_to_data(listing)
             data.photo_urls = item.photo_urls
             result = match(profile, data)
@@ -192,14 +180,8 @@ class Pipeline:
         if result.passed:
             if not listing.photos:
                 self._download_photos(session, listing, photo_urls)
-            prop = assign_property(session, listing)
+            assign_property(session, listing)
             log.info("potrivire %s: %s (%s)", profile.name, listing.url, result.score)
-            if (
-                result.score >= profile.notify.min_score
-                and not self._already_alerted(session, profile, prop.id, "new")
-                and self._alert_new(session, profile, listing, result)
-            ):
-                stats.alerts += 1
         return is_new
 
     @staticmethod
@@ -229,68 +211,19 @@ class Pipeline:
         if hashed:
             listing.phone_hash = hashed
 
-    def _update_existing(
-        self, session: Session, profile: Profile, listing: Listing, item: ListingData, stats: RunStats
-    ) -> None:
-        change = self._refresh(session, listing, item)
-        if change:
-            self._price_drop_alert(session, profile, listing, *change, stats)
-
     @staticmethod
-    def _refresh(session: Session, listing: Listing, item: ListingData) -> tuple[float, float] | None:
-        """Anunțul e încă activ: actualizează prețul și întoarce (preț vechi, preț nou) dacă s-a schimbat."""
+    def _refresh(session: Session, listing: Listing, item: ListingData) -> None:
+        """Anunțul e încă activ: actualizează prețul și păstrează un snapshot dacă s-a schimbat."""
         listing.last_seen = utcnow()
         listing.active = True
         listing.removed_at = None
         old_price = listing.price_eur
         new_price = item.price_eur
         if new_price is None or old_price is None or abs(new_price - old_price) < 1:
-            return None
+            return
         listing.price, listing.currency, listing.price_eur = item.price, item.currency, new_price
         session.add(ListingSnapshot(listing=listing, price_eur=new_price))
         log.info("preț schimbat %s: %s → %s", listing.url, old_price, new_price)
-        return old_price, new_price
-
-    def _price_drop_alert(
-        self,
-        session: Session,
-        profile: Profile,
-        listing: Listing,
-        old_price: float,
-        new_price: float,
-        stats: RunStats,
-    ) -> None:
-        drop = (old_price - new_price) / old_price * 100
-        if drop < profile.notify.price_drop_percent or listing.property_id is None:
-            return
-        label = label_for(session, listing.property_id)
-        if label.hidden or label.verdict == "fake":
-            return
-        if profile.notify.price_drop_scope == "saved":
-            if not label.saved:
-                return  # doar apartamentele salvate din interfață
-        elif not self._already_alerted(session, profile, listing.property_id, "new"):
-            return  # anunțul nu a fost niciodată relevant pentru acest profil
-        result = match(profile, listing_to_data(listing))
-        if not result.passed:
-            return
-        last_drop = session.scalar(
-            select(func.min(Alert.price_eur)).where(
-                Alert.profile == profile.name, Alert.property_id == listing.property_id, Alert.kind == "price_drop"
-            )
-        )
-        if last_drop is not None and new_price >= last_drop:
-            return
-        self._send(
-            session,
-            profile,
-            listing,
-            result,
-            "price_drop",
-            title=f"Preț scăzut cu {drop:.0f}% · {format_price(new_price)}",
-            lead=f"Înainte: {format_price(old_price)}",
-        )
-        stats.alerts += 1
 
     # ----------------------------------------------------------- reverificare
 
@@ -331,14 +264,12 @@ class Pipeline:
                 adapter = adapters.setdefault(
                     listing.platform, self.adapters[listing.platform](self.client, self.settings)
                 )
-                self._recheck_one(session, profiles, adapter, listing, stats)
+                self._recheck_one(session, adapter, listing, stats)
                 session.commit()
         if due:
             log.info("reverificare: %d anunțuri, %d dispărute", stats.rechecked, stats.removed)
 
-    def _recheck_one(
-        self, session: Session, profiles: list[Profile], adapter: Adapter, listing: Listing, stats: RunStats
-    ) -> None:
+    def _recheck_one(self, session: Session, adapter: Adapter, listing: Listing, stats: RunStats) -> None:
         now = utcnow()
         try:
             item = adapter.fetch_detail(listing_to_data(listing))
@@ -362,10 +293,7 @@ class Pipeline:
             return
         listing.checked_at = now
         stats.rechecked += 1
-        change = self._refresh(session, listing, item)
-        if change:
-            for profile in profiles:
-                self._price_drop_alert(session, profile, listing, *change, stats)
+        self._refresh(session, listing, item)
 
     @staticmethod
     def _mark_removed(listing: Listing, now: datetime, stats: RunStats) -> None:
@@ -391,139 +319,6 @@ class Pipeline:
                 log.debug("poză eșuată %s: %s", url, exc)
             session.add(photo)
         session.flush()
-
-    # ---------------------------------------------------------------- alerte
-
-    @staticmethod
-    def _already_alerted(session: Session, profile: Profile, property_id: int, kind: str) -> bool:
-        return (
-            session.scalar(
-                select(func.count(Alert.id)).where(
-                    Alert.profile == profile.name, Alert.property_id == property_id, Alert.kind == kind
-                )
-            )
-            > 0
-        )
-
-    def _alert_new(self, session: Session, profile: Profile, listing: Listing, result: MatchResult) -> bool:
-        label = label_for(session, listing.property_id)
-        if label.hidden or label.verdict == "fake":
-            return False
-        assessment = self._assessment(session, listing)
-        if assessment.score < profile.notify.min_authenticity and label.verdict != "real":
-            # Nu se înregistrează: dacă semnalele dispar (sau apartamentul e confirmat real), alerta poate pleca.
-            log.info(
-                "alertă oprită pentru %s: autenticitate %d sub %g",
-                listing.url,
-                assessment.score,
-                profile.notify.min_authenticity,
-            )
-            return False
-        parts = [format_price(listing.price_eur), floor_label(listing.floor)]
-        if listing.area_m2:
-            parts.append(f"{listing.area_m2:g} mp")
-        if listing.rooms:
-            parts.append(f"{listing.rooms} cam.")
-        self._send(
-            session,
-            profile,
-            listing,
-            result,
-            "new",
-            title="Apartament nou · " + " · ".join(parts),
-            assessment=assessment,
-        )
-        return True
-
-    @staticmethod
-    def _assessment(session: Session, listing: Listing) -> Assessment:
-        session.flush()
-        history = property_history(session, listing.property_id)
-        return assess(history, Context.build(session)) if history else Assessment()
-
-    def _send(
-        self,
-        session: Session,
-        profile: Profile,
-        listing: Listing,
-        result: MatchResult,
-        kind: str,
-        *,
-        title: str,
-        lead: str = "",
-        assessment: Assessment | None = None,
-    ) -> None:
-        publisher = {"owner": "proprietar", "agency": "agenție"}.get(
-            listing.publisher_type or "", "publicator necunoscut"
-        )
-        if listing.publisher_name:
-            publisher += f" ({listing.publisher_name})"
-        others = session.scalars(
-            select(Listing).where(Listing.property_id == listing.property_id, Listing.id != listing.id)
-        ).all()
-        lines = [
-            line
-            for line in (
-                lead,
-                listing.title,
-                f"{PLATFORM_NAMES.get(listing.platform, listing.platform)} · {publisher}",
-                f"Scor {result.score:.0f}: " + ", ".join(result.reasons)
-                if result.reasons
-                else f"Scor {result.score:.0f}",
-            )
-            if line
-        ]
-        assessment = assessment or self._assessment(session, listing)
-        authenticity = f"Autenticitate {assessment.score}"
-        if assessment.signals:
-            authenticity += ": " + "; ".join(signal.label for signal in assessment.signals)
-        lines.append(authenticity)
-        if others:
-            lines.append(
-                "Apare și pe: "
-                + ", ".join(f"{PLATFORM_NAMES.get(o.platform, o.platform)} {format_price(o.price_eur)}" for o in others)
-            )
-        first_photo = next((p.source_url for p in listing.photos if p.phash), None)
-        self.notifier.send(
-            Message(
-                title=title,
-                body="\n".join(lines),
-                url=listing.url,
-                image_url=first_photo,
-                tags=["house"] if kind == "new" else ["chart_with_downwards_trend"],
-                priority=4 if kind == "new" else 3,
-            ),
-            profile.notify.channels,
-            **profile.notify.destinations(),
-        )
-        session.add(
-            Alert(
-                profile=profile.name,
-                property_id=listing.property_id,
-                listing_id=listing.id,
-                kind=kind,
-                score=result.score,
-                price_eur=listing.price_eur,
-            )
-        )
-        session.flush()
-
-    def _warn(self, session: Session, profile: Profile, platform: str, text: str) -> None:
-        """Avertismente tehnice, cel mult unul la 12 ore pe platformă."""
-        since = datetime.now(UTC) - WARNING_COOLDOWN
-        recent = session.scalars(
-            select(RunLog)
-            .where(RunLog.platform == platform, RunLog.started_at >= since)
-            .order_by(RunLog.started_at.desc())
-        ).all()
-        problems = [r for r in recent if r.error or r.found == 0]
-        if len(problems) > 1:  # rularea curentă e deja în listă; o problemă anterioară = am anunțat deja
-            return
-        self.notifier.send(
-            Message(title="home-tracker: problemă la colectare", body=text, tags=["warning"], priority=2),
-            profile.notify.channels,
-            **profile.notify.destinations(),
-        )
 
 
 def listing_to_data(listing: Listing) -> ListingData:

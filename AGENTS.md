@@ -11,12 +11,12 @@
 
 ## Product and architecture baseline
 
-- The product is a **personal** tool that collects apartment listings from Romanian platforms (Storia, Imobiliare.ro, Publi24, Lajumate; OLX disabled while it blocks the collector; agency sites later), groups the listings that describe the same physical apartment, scores their authenticity and alerts the maintainer when something matches a search profile. The first profile is a Gheorgheni (Cluj-Napoca) apartment search.
+- The product is a **personal** tool that collects apartment listings from Romanian platforms (Storia, Imobiliare.ro, Publi24, Lajumate; OLX disabled while it blocks the collector; agency sites later), groups the listings that describe the same physical apartment, scores their authenticity and shows them in a local web interface, filtered and ordered by search profiles. It sends no notifications. The first profile is a Gheorgheni (Cluj-Napoca) apartment search.
 - Personal, low-volume use is a hard constraint. OLX and Storia forbid automated collection in their terms; the tool stays acceptable only as a polite, single-user collector that never bypasses protections ([security and data](docs/engineering/security-and-data.md)). Do not build features that republish listings, photos or contact data, serve other users or run as a hosted service.
 - Everything runs in Docker Compose on a single machine that is not always on ([ADR 0001](docs/engineering/decisions/0001-docker-compose.md)). Containers publish ports only on the host's `127.0.0.1`; outside access goes through a tunnel configured outside this repository (for example Cloudflare Tunnel), with an identity check such as Cloudflare Access in front of the web interface and ntfy's own token auth for ntfy.
-- Python 3.12 with `uv`, a single package `hometracker` under `src/`, an argparse CLI, SQLAlchemy on PostgreSQL with a SQLite fallback for tests and local runs ([ADR 0002](docs/engineering/decisions/0002-sqlalchemy-postgres.md)), ntfy and SMTP for notifications.
-- Data enters only through the adapters run by the `worker` (`hometracker loop` / `run`). Matching, deduplication, notifications and the future web interface read the database and never call a platform themselves.
-- Profiles are YAML files in `profiles/`, not code, edited by hand or in the web profile editor. A new search is a new file (kept out of git, since it can hold personal notification destinations); a new platform is a new adapter module.
+- Python 3.12 with `uv`, a single package `hometracker` under `src/`, an argparse CLI, SQLAlchemy on PostgreSQL with a SQLite fallback for tests and local runs ([ADR 0002](docs/engineering/decisions/0002-sqlalchemy-postgres.md)), FastAPI with server-rendered Jinja2 for the web interface.
+- Data enters only through the adapters run by the `worker` (`hometracker loop` / `run`). Matching, deduplication and the web interface read the database and never call a platform themselves.
+- Profiles are YAML files in `profiles/`, not code, edited by hand or in the web profile editor. A new search is a new file (kept out of git; only the example profile is committed); a new platform is a new adapter module.
 - Keep things simple: plain modules, small dataclasses, no service layer or new infrastructure without a short [decision record](docs/engineering/decisions/template.md).
 
 ## Working agreements
@@ -33,7 +33,7 @@
 
 - Follow [coding standards](docs/engineering/coding-standards.md) and [security/data rules](docs/engineering/security-and-data.md).
 - Collection is idempotent and restartable: listings are unique per `(platform, external_id)`, reruns update instead of duplicating, raw HTML is archived under `data/raw/` so parsers can be re-run on history.
-- One apartment triggers one alert per profile and event kind, however many platforms publish it. A change must not make alerts repeat or disappear silently.
+- One physical apartment is one card in the interface, however many platforms publish it. A change must not split one apartment into several or hide an apartment that matches a profile.
 - Phone numbers are stored only as hashes; names and listing text stay local.
 - The repository is public ([ADR 0003](docs/engineering/decisions/0003-public-repository.md)). Never commit secrets, `.env`, the database, `data/`, photos or real pages copied from a platform. Test fixtures are synthetic: the page's structure with invented listings, prices, names and phone numbers.
 
@@ -41,14 +41,14 @@
 
 - Run `python3 scripts/verify.py` before handoff. See [testing and verification](docs/engineering/testing-and-verification.md) for scoped runs.
 - `NOT APPLICABLE` is not evidence that a feature works. Missing tools, failed tests and unavailable infrastructure must be reported honestly.
-- Add tests for changed behavior and meaningful failure cases, in proportion to risk: adapters against synthetic fixtures, profiles and dedup against hand-built listings, the pipeline end to end on a temporary SQLite database with a fake client and notifier. Tests never call live platforms or send notifications.
+- Add tests for changed behavior and meaningful failure cases, in proportion to risk: adapters against synthetic fixtures, profiles and dedup against hand-built listings, the pipeline end to end on a temporary SQLite database with a fake client. Tests never call live platforms.
 - Do not disable checks, add broad lint suppressions, skip failing tests or weaken acceptance criteria to get a pass.
 - Inspect the final diff, including `uv.lock`. Adapter changes are also checked on a real page (`hometracker dump "<url>"`) and the PR records the result.
-- Notification changes need one real delivery (`hometracker test-notify ntfy`); web interface changes need a browser check. Follow the [review process](docs/engineering/code-review.md) and label self-review honestly.
+- Web interface changes need a browser check. Follow the [review process](docs/engineering/code-review.md) and label self-review honestly.
 - Report what changed, the commands actually run, their outcomes and remaining limitations. Never claim checks you did not run.
 
 ## Code review rules
 
-- Prioritize correctness of matching and alerts: a missed matching apartment, a false merge of two apartments, duplicate or lost alerts, wrong price conversion (RON vs EUR), wrong floor interpretation.
+- Prioritize correctness of matching and dedup: a missed matching apartment, a false merge of two apartments, one apartment shown several times, wrong price conversion (RON vs EUR), wrong floor interpretation.
 - Flag unknown values treated as a match or a rejection without intent, non-idempotent collection, unbounded or parallel requests against a platform, stored personal data, and anything that exposes a port beyond `127.0.0.1`.
 - Do not duplicate formatter or linter output or invent hypothetical issues. State what could not be checked.

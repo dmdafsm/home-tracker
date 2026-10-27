@@ -1,4 +1,4 @@
-"""Ajutoare comune pentru testele fluxului complet: imagini sintetice, adapter și notificator false."""
+"""Ajutoare comune pentru testele fluxului complet: imagini sintetice și adapter fals."""
 
 import io
 from dataclasses import replace
@@ -29,22 +29,6 @@ class FakeClient:
 
     def get_bytes(self, url: str) -> bytes:
         return self.images[url]
-
-
-class FakeNotifier:
-    def __init__(self):
-        self.sent = []
-        self.destinations = []
-
-    def send(self, message, channels, **destinations):
-        self.sent.append(message)
-        self.destinations.append(destinations)
-        return channels
-
-    @property
-    def alerts(self):
-        """Doar alertele despre apartamente, fără avertismentele tehnice."""
-        return [m for m in self.sent if "warning" not in m.tags]
 
 
 def make_adapter(name: str, catalog: dict[str, list[ListingData]], details: dict, calls: list[str] | None = None):
@@ -81,8 +65,6 @@ PROFILE = Profile.model_validate(
             "text_any": ["gheorgheni"],
         },
         "preferences": {"balcony": 25, "known_floor": 10},
-        # Testele vechi de scădere de preț folosesc "alerted"; "saved" e testat separat (test_labels.py).
-        "notify": {"min_score": 60, "price_drop_percent": 3, "channels": ["ntfy"], "price_drop_scope": "alerted"},
         "sources": {"storia": {"url": "https://storia.test"}, "olx": {"url": "https://olx.test"}},
     }
 )

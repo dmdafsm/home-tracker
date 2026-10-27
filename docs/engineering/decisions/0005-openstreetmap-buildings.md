@@ -9,7 +9,7 @@ Stage 4 of the [plan](../../plan.md) estimates the construction year of each apa
 ## Decision
 
 - The worker queries the public Overpass API (`OVERPASS_URL`, default `https://overpass-api.de/api/interpreter`) for buildings within 30 m of a matched apartment's coordinates, at most `OSM_LOOKUPS_PER_RUN` (default 5, 0 disables) per run, through the same polite client (one request at a time per host, random delays, the project's User-Agent).
-- Results are cached in `osm_building`, keyed by coordinates rounded to 4 decimals (about 10 m), including "nothing found", and never refetched automatically. The web app and the daily summary only read the cache.
+- Results are cached in `osm_building`, keyed by coordinates rounded to 4 decimals (about 10 m), including "nothing found", and never refetched automatically. The web app only reads the cache.
 - The year comes from the nearest building with `start_date` (`1978`, `1978-05`, `~1975`, `1970s`, `C20` are understood); `building:levels` is kept as information.
 - Pages that show OSM data credit "© OpenStreetMap contributors" (ODbL).
 

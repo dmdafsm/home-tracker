@@ -1,20 +1,14 @@
-"""Etichetele: salvat, ascuns, real/fals, „nu e același apartament”, și efectul lor asupra alertelor."""
-
-from datetime import UTC, datetime, timedelta
+"""Etichetele: salvat, ascuns, real/fals, „nu e același apartament” și butoanele din interfață."""
 
 import pytest
 import yaml
 from fastapi.testclient import TestClient
-from helpers import PROFILE, FakeClient, FakeNotifier, listing, make_adapter, picture
+from helpers import PROFILE, listing
 
 from hometracker.config import Settings
 from hometracker.labels import apply_label, label_for, split_listing
-from hometracker.models import LabelEvent, Listing, init_db, make_engine
-from hometracker.pipeline import Pipeline
-from hometracker.summary import build_summary
+from hometracker.models import LabelEvent, Listing
 from hometracker.web import create_app
-
-SAVED_SCOPE = PROFILE.model_copy(update={"notify": PROFILE.notify.model_copy(update={"price_drop_scope": "saved"})})
 
 
 def property_of(sessions, external_id) -> int:
@@ -23,7 +17,7 @@ def property_of(sessions, external_id) -> int:
 
 
 def test_labels_change_state_and_are_logged(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
     run()
     property_id = property_of(sessions, "s1")
@@ -50,7 +44,7 @@ def test_labels_change_state_and_are_logged(setup):
 
 
 def test_not_the_same_apartment_splits_the_listing(setup):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     agency = {"publisher_name": "Agenția Exemplu", "publisher_type": "agency"}
     for item in (listing("storia", "s1", [1, 2, 3], **agency), listing("storia", "s2", [1, 2, 3], **agency)):
         catalog["storia"] = [item]
@@ -71,75 +65,9 @@ def test_not_the_same_apartment_splits_the_listing(setup):
             split_listing(session, rows["s1"].id)  # acum e singur
 
 
-def make_run(tmp_path, catalog, notifier, profile):
-    settings = Settings(
-        database_url=f"sqlite:///{tmp_path / 'labels.sqlite'}", data_dir=tmp_path, osm_lookups_per_run=0
-    )
-    sessions = init_db(make_engine(settings.database_url))
-    images = {f"https://img.test/{i}.jpg": picture(i) for i in range(1, 20)}
-
-    def run():
-        adapters = {name: make_adapter(name, catalog, {}) for name in catalog}
-        Pipeline(settings, sessions, FakeClient(images), notifier, adapters=adapters).run([profile], 1)
-
-    return sessions, run
-
-
-def test_price_drops_alert_only_for_saved_apartments(tmp_path):
-    catalog, notifier = {"storia": [], "olx": []}, FakeNotifier()
-    sessions, run = make_run(tmp_path, catalog, notifier, SAVED_SCOPE)
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3])]
-    run()
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3], price_eur=144000)]
-    run()
-    assert [m.title.split(" ·")[0] for m in notifier.alerts] == ["Apartament nou"]  # nesalvat: fără alertă
-    with sessions() as session:
-        apply_label(session, property_of(sessions, "s1"), "save")
-        session.commit()
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3], price_eur=139000)]
-    run()
-    assert notifier.alerts[-1].title.startswith("Preț scăzut cu 3% · 139.000 €")
-    with sessions() as session:
-        apply_label(session, property_of(sessions, "s1"), "hide")
-        session.commit()
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3], price_eur=130000)]
-    run()
-    assert len(notifier.alerts) == 2  # ascuns: nicio alertă, chiar dacă e salvat
-
-
-def test_confirmed_real_overrides_the_authenticity_threshold(tmp_path):
-    catalog, notifier = {"storia": [], "olx": []}, FakeNotifier()
-    strict = PROFILE.model_copy(update={"notify": PROFILE.notify.model_copy(update={"min_authenticity": 100})})
-    sessions, run = make_run(tmp_path, catalog, notifier, strict)
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3, 4, 5], floor=None)]  # scor 95
-    run()
-    assert notifier.alerts == []
-    with sessions() as session:
-        apply_label(session, property_of(sessions, "s1"), "real")
-        session.commit()
-    run()
-    assert len(notifier.alerts) == 1
-
-
-def test_hidden_and_fake_apartments_leave_the_daily_summary(tmp_path):
-    catalog, notifier = {"storia": [], "olx": []}, FakeNotifier()
-    strict = PROFILE.model_copy(update={"notify": PROFILE.notify.model_copy(update={"min_score": 101})})
-    sessions, run = make_run(tmp_path, catalog, notifier, strict)  # nicio alertă: totul e „sub prag”
-    catalog["storia"] = [listing("storia", "s1", [1, 2, 3]), listing("storia", "s2", [7, 8, 9], area_m2=70)]
-    run()
-    now = datetime.now(UTC)
-    window = (now - timedelta(hours=1), now + timedelta(minutes=1))
-    with sessions() as session:
-        assert len(build_summary(session, strict, *window, Settings()).weak) == 2
-        apply_label(session, property_of(sessions, "s1"), "hide")
-        apply_label(session, property_of(sessions, "s2"), "fake")
-        session.commit()
-        assert build_summary(session, strict, *window, Settings()).weak == []
-
-
 @pytest.fixture
 def web(setup, tmp_path):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     profiles = tmp_path / "profiles"
     profiles.mkdir()
     (profiles / "test.yaml").write_text(yaml.safe_dump(PROFILE.model_dump(mode="json")), encoding="utf-8")

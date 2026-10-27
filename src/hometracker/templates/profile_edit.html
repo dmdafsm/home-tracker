@@ -4,9 +4,8 @@
 <section>
   <h2>{% if original %}Profilul {{ original.name }}{% else %}Profil nou{% endif %}</h2>
   <p class="small muted">
-    Filtre, preferințe, notificări (<code>notify.channels</code>, <code>notify.ntfy_topic</code>,
-    <code>notify.email_to</code>) și căutări pe platforme; comentariile din fișier se păstrează.
-    {% if original %}Numele nu se schimbă la editare, pentru că alertele trimise sunt ținute pe nume.{% endif %}
+    Filtre, preferințe și căutări pe platforme; comentariile din fișier se păstrează.
+    {% if original %}Numele nu se schimbă la editare (e și numele fișierului); pentru alt nume, creează un profil nou din acesta.{% endif %}
     „Verifică” validează profilul și numără, fără să salveze, câte dintre apartamentele deja grupate ar trece de filtre; anunțurile care n-au trecut de niciun profil nu sunt grupate, deci un filtru mai larg arată tot ce va găsi worker-ul abia după rulările următoare.
   </p>
   {% if error %}<p class="error">{{ error }}</p>{% endif %}
