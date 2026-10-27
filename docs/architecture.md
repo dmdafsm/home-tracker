@@ -32,7 +32,8 @@ profiles/*.yaml ──> pipeline ──> adapter.search(url) ──> PoliteClien
 - **Dedup** (`dedup.py`) attaches a listing to an existing property when they share at least two informative photos (Hamming distance ≤ 8 on pHash), or one photo plus the same area and floor.
 - **Pipeline** (`pipeline.py`) runs a profile across its sources, stores listings and snapshots, downloads photos for matching listings, assigns properties, sends alerts and warns when an adapter errors or returns nothing. After the searches it rechecks matched listings that have left the search results (see below).
 - **Notifications** (`notify.py`): ntfy (JSON publish, token auth) and SMTP email.
-- **CLI** (`cli.py`): `loop`, `run [--catchup]`, `dump <url>`, `test-notify`, `matches`.
+- **Daily summary** (`summary.py`): after each run in `loop`, a profile whose summary is due (first run after `SUMMARY_HOUR` local time, once per local day) gets a message on `notify.summary_channels` (email by default) covering the period since the last summary (24 h the first time, at most 7 days): new listings that passed the filters but stayed under the alert threshold, listings that disappeared, collection gaps longer than two intervals, and the number of instant alerts sent. A summary that no channel delivered is not recorded and is retried at the next run. ntfy gets a shortened body.
+- **CLI** (`cli.py`): `loop`, `run [--catchup]`, `summary [--print]`, `dump <url>`, `test-notify`, `matches`.
 
 ## Tables and ownership
 
@@ -45,6 +46,7 @@ All tables are defined in `models.py` and written by the worker only.
 | `photo` | `pipeline.py` | downloaded photos: source URL, local path, pHash, dHash |
 | `property` | `dedup.py` | the physical apartment (cluster); listings point to it through `listing.property_id` |
 | `alert` | `pipeline.py` | sent notifications per profile, property and kind (`new`, `price_drop`) |
+| `summary_log` | `summary.py` | one row per daily summary delivered: profile, covered period, channels |
 | `run_log` | `pipeline.py` | one row per profile and platform run: counts and errors, used for warnings and catch-up |
 
 ## Key conventions

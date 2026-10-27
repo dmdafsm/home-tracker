@@ -1,4 +1,4 @@
-"""Linia de comandă: `hometracker loop | run | dump | test-notify | matches`."""
+"""Linia de comandă: `hometracker loop | run | summary | dump | test-notify | matches`."""
 
 from __future__ import annotations
 
@@ -7,7 +7,8 @@ import logging
 import random
 import sys
 import time
-from datetime import UTC, datetime
+from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlparse
 
 from sqlalchemy import select
@@ -15,10 +16,11 @@ from sqlalchemy import select
 from .adapters import ADAPTERS
 from .config import Settings, load_settings
 from .http import PoliteClient
-from .models import Alert, Listing, init_db, make_engine
+from .models import Alert, Listing, init_db, make_engine, utcnow
 from .notify import Message, Notifier, floor_label, format_price
 from .pipeline import Pipeline
 from .profiles import load_profiles
+from .summary import build_summary, due_period, format_summary, send_due_summaries, send_summary
 
 log = logging.getLogger("hometracker")
 
@@ -69,6 +71,10 @@ def cmd_loop(args: argparse.Namespace) -> None:
             _run_once(settings, sessions, catchup=catchup, profile_name=None)
         except Exception:
             log.exception("rularea a eșuat; reîncerc la următorul interval")
+        try:
+            send_due_summaries(sessions, load_profiles(settings.profiles_dir), Notifier(settings), settings)
+        except Exception:
+            log.exception("rezumatul zilnic a eșuat; reîncerc la următorul interval")
         last_run = now
         wait = random.uniform(settings.interval_min_minutes, settings.interval_max_minutes) * 60
         target = time.time() + wait
@@ -82,6 +88,28 @@ def cmd_run(args: argparse.Namespace) -> None:
     settings = load_settings()
     sessions = _setup(settings)
     _run_once(settings, sessions, catchup=args.catchup, profile_name=args.profile)
+
+
+def cmd_summary(args: argparse.Namespace) -> None:
+    """Rezumatul de acum: perioada de la ultimul rezumat trimis (sau ultimele 24 de ore) până acum."""
+    settings = load_settings()
+    sessions = _setup(settings)
+    profiles = [p for p in load_profiles(settings.profiles_dir) if not args.profile or p.name == args.profile]
+    # Ora din SUMMARY_HOUR nu contează aici: comanda e pornită de mână.
+    now_settings = replace(settings, summary_hour=0)
+    for profile in profiles:
+        with sessions() as session:
+            period = due_period(session, profile, utcnow(), now_settings)
+            if period is None or args.print:
+                period = period or (utcnow() - timedelta(hours=24), utcnow())
+            if args.print:
+                message = format_summary(build_summary(session, profile, *period, settings), settings)
+                print(f"{message.title}\n\n{message.body}\n")
+                continue
+        if period is None:
+            print(f"{profile.name}: rezumatul de azi a fost deja trimis")
+        elif not send_summary(sessions, profile, Notifier(settings), settings, *period):
+            print(f"{profile.name}: rezumatul nu a putut fi trimis (canale configurate?)")
 
 
 def cmd_dump(args: argparse.Namespace) -> None:
@@ -167,6 +195,11 @@ def main(argv: list[str] | None = None) -> None:
     run.add_argument("--catchup", action="store_true", help="citește mai multe pagini")
     run.add_argument("--profile", help="doar acest profil")
     run.set_defaults(func=cmd_run)
+
+    summary = sub.add_parser("summary", help="trimite rezumatul zilnic acum")
+    summary.add_argument("--profile", help="doar acest profil")
+    summary.add_argument("--print", action="store_true", help="doar afișează ultimele 24 de ore, fără să trimită")
+    summary.set_defaults(func=cmd_summary)
 
     dump = sub.add_parser("dump", help="salvează o pagină și arată ce extrage adapterul")
     dump.add_argument("url")

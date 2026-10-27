@@ -149,7 +149,7 @@ class Pipeline:
                 return False
             # Anunț cunoscut, încă neanunțat pentru acest profil: poate a scăzut prețul în interval,
             # sau profilul e nou. Îl reevaluăm cu datele salvate.
-            data = _as_data(listing)
+            data = listing_to_data(listing)
             data.photo_urls = item.photo_urls
             result = match(profile, data)
             if self._worth_detail(data, result):
@@ -232,7 +232,7 @@ class Pipeline:
             return
         if not self._already_alerted(session, profile, listing.property_id, "new"):
             return  # anunțul nu a fost niciodată relevant pentru acest profil
-        result = match(profile, _as_data(listing))
+        result = match(profile, listing_to_data(listing))
         if not result.passed:
             return
         last_drop = session.scalar(
@@ -302,7 +302,7 @@ class Pipeline:
     ) -> None:
         now = utcnow()
         try:
-            item = adapter.fetch_detail(_as_data(listing))
+            item = adapter.fetch_detail(listing_to_data(listing))
         except BlockedError as exc:
             stats.blocked.add(listing.platform)
             log.warning("reverificare oprită pe %s: %s", listing.platform, exc)
@@ -451,7 +451,7 @@ class Pipeline:
         )
 
 
-def _as_data(listing: Listing) -> ListingData:
+def listing_to_data(listing: Listing) -> ListingData:
     data = ListingData(
         platform=listing.platform, external_id=listing.external_id, url=listing.url, is_detail=listing.detail_fetched
     )

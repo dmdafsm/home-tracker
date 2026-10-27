@@ -52,6 +52,10 @@ class Settings:
     recheck_after_hours: int = 24
     recheck_per_run: int = 10
 
+    # Rezumatul zilnic pleacă la prima rulare de după această oră locală.
+    summary_hour: int = 20
+    timezone: str = "Europe/Bucharest"
+
     photos_per_listing: int = 5
     user_agent: str = field(
         default=(
@@ -99,4 +103,6 @@ def load_settings() -> Settings:
         log_level=_env("LOG_LEVEL", "INFO"),
         recheck_after_hours=_env_int("RECHECK_AFTER_HOURS", 24),
         recheck_per_run=_env_int("RECHECK_PER_RUN", 10),
+        summary_hour=_env_int("SUMMARY_HOUR", 20),
+        timezone=_env("TIMEZONE", "Europe/Bucharest"),
     )

@@ -27,6 +27,8 @@ notify:
   min_score: 60
   price_drop_percent: 3
   channels: [ntfy, email]
+  # Rezumatul zilnic (după SUMMARY_HOUR): noi sub prag, dispărute, goluri. [] îl dezactivează.
+  summary_channels: [email]
 
 # Căutările de pe fiecare platformă. Cel mai sigur: setează filtrele pe site,
 # în browser, și copiază aici URL-ul rezultat, sortat după cele mai noi.
