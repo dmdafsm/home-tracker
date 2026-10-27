@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections import Counter
 from dataclasses import dataclass, field, replace
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from itertools import pairwise
 from zoneinfo import ZoneInfo
 
@@ -13,7 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from .config import Settings
-from .models import Alert, Listing, RunLog, SummaryLog, utcnow
+from .models import Alert, Listing, RunLog, SummaryLog, as_utc, utcnow
 from .notify import PLATFORM_NAMES, Message, Notifier, floor_label, format_price
 from .pipeline import listing_to_data
 from .profiles import MatchResult, Profile, match
@@ -27,11 +27,6 @@ MAX_PERIOD = timedelta(days=7)
 NTFY_LIMIT = 3500
 
 
-def as_utc(value: datetime) -> datetime:
-    """SQLite întoarce datele fără fus orar; în baza de date sunt mereu UTC."""
-    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
-
-
 @dataclass
 class Summary:
     profile: Profile
@@ -39,6 +34,7 @@ class Summary:
     end: datetime
     weak: list[tuple[Listing, MatchResult]] = field(default_factory=list)
     removed: list[Listing] = field(default_factory=list)
+    republished: list[Listing] = field(default_factory=list)
     gaps: list[tuple[datetime, datetime]] = field(default_factory=list)
     alerts: Counter[str] = field(default_factory=Counter)
 
@@ -74,6 +70,18 @@ def build_summary(session: Session, profile: Profile, start: datetime, end: date
     summary.removed = [
         listing
         for listing in removed
+        if listing.property_id in alerted or match(profile, listing_to_data(listing)).passed
+    ]
+
+    # Republicate în perioadă: același publicator, aceeași platformă, același apartament, sub un id nou.
+    republished = session.scalars(
+        select(Listing)
+        .where(Listing.first_seen >= start, Listing.first_seen < end, Listing.republished_from_id.is_not(None))
+        .order_by(Listing.first_seen)
+    ).all()
+    summary.republished = [
+        listing
+        for listing in republished
         if listing.property_id in alerted or match(profile, listing_to_data(listing)).passed
     ]
 
@@ -135,14 +143,24 @@ def format_summary(summary: Summary, settings: Settings) -> Message:
             f"Dispărute, posibil vândute ({len(summary.removed)}):\n"
             + "\n".join(line(listing) for listing in summary.removed)
         )
+    if summary.republished:
+        sections.append(
+            f"Republicate sub un id nou ({len(summary.republished)}):\n"
+            + "\n".join(
+                line(listing, f"republică anunțul {listing.republished_from_id}, apartamentul {listing.property_id}")
+                for listing in summary.republished
+            )
+        )
     if summary.gaps:
         sections.append(
             "Goluri în colectare (anunțurile apărute și dispărute atunci se pot pierde):\n"
             + "\n".join(f"- {local(a)} – {local(b)}" for a, b in summary.gaps)
         )
-    if not (summary.weak or summary.removed):
+    if not (summary.weak or summary.removed or summary.republished):
         sections.append("Nimic altceva nou.")
     counts = f"{len(summary.weak)} noi slab potrivite, {len(summary.removed)} dispărute"
+    if summary.republished:
+        counts += f", {len(summary.republished)} republicate"
     return Message(
         title=f"Rezumat zilnic · {summary.profile.name} · {counts}",
         body="\n\n".join(sections),

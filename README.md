@@ -33,9 +33,11 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
   căutare sunt redeschise o dată la 24 de ore (cel mult `RECHECK_PER_RUN` pe rulare). O
   scădere de preț găsită așa trimite alerta obișnuită; un anunț șters (404/410) e marcat ca
   dispărut.
+- **Republicările**: un anunț nou pentru același apartament, pe aceeași platformă, de la
+  același publicator (telefon sau nume), e marcat ca republicare și nu trimite o alertă nouă.
 - **Rezumatul zilnic** pleacă pe email la prima rulare de după ora `SUMMARY_HOUR` (implicit
   20:00): anunțurile noi care trec de filtre dar n-au atins pragul de alertă, cele dispărute
-  (posibil vândute) și intervalele în care nu s-a colectat nimic.
+  (posibil vândute), republicările și intervalele în care nu s-a colectat nimic.
 - **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.
@@ -102,6 +104,7 @@ docker compose exec worker hometracker run          # o rulare imediată
 docker compose exec worker hometracker run --catchup
 docker compose exec worker hometracker matches      # ultimele alerte
 docker compose exec worker hometracker summary --print   # rezumatul ultimelor 24 de ore, fără trimitere
+docker compose exec worker hometracker property "<url>"  # istoricul apartamentului: anunțuri, prețuri, republicări
 docker compose exec worker hometracker dump "<url>" # verifică ce extrage un adapter
 ```
 
@@ -149,7 +152,9 @@ rulări locale în afara Docker.
 | `src/hometracker/adapters/` | câte un adapter pe platformă, cu interfața din `base.py` |
 | `src/hometracker/parsing.py` | interpretarea textelor în română: etaj, preț, suprafață, balcon |
 | `src/hometracker/profiles.py` | profilurile YAML și calculul scorului |
-| `src/hometracker/dedup.py` | gruparea anunțurilor pe apartamente, după poze |
+| `src/hometracker/dedup.py` | gruparea anunțurilor pe apartamente, după poze, și republicările |
+| `src/hometracker/history.py` | istoricul unui apartament |
+| `src/hometracker/summary.py` | rezumatul zilnic |
 | `src/hometracker/pipeline.py` | o rulare completă: căutare, detaliu, salvare, alerte |
 | `src/hometracker/notify.py` | ntfy și email |
 | `src/hometracker/cli.py` | comenzile `hometracker` |

@@ -1,4 +1,4 @@
-"""Linia de comandă: `hometracker loop | run | summary | dump | test-notify | matches`."""
+"""Linia de comandă: `hometracker loop | run | summary | property | dump | test-notify | matches`."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ from sqlalchemy import select
 
 from .adapters import ADAPTERS
 from .config import Settings, load_settings
+from .history import find_property_id, format_history, property_history
 from .http import PoliteClient
 from .models import Alert, Listing, init_db, make_engine, utcnow
 from .notify import Message, Notifier, floor_label, format_price
@@ -112,6 +113,18 @@ def cmd_summary(args: argparse.Namespace) -> None:
             print(f"{profile.name}: rezumatul nu a putut fi trimis (canale configurate?)")
 
 
+def cmd_property(args: argparse.Namespace) -> None:
+    """Istoricul unui apartament: anunțurile, publicatorii, prețurile, republicările."""
+    settings = load_settings()
+    sessions = _setup(settings)
+    with sessions() as session:
+        property_id = find_property_id(session, args.reference)
+        history = property_history(session, property_id) if property_id is not None else None
+        if history is None:
+            sys.exit(f"nu am găsit apartamentul {args.reference}")
+        print(format_history(history, settings))
+
+
 def cmd_dump(args: argparse.Namespace) -> None:
     """Descarcă o pagină, o salvează în data/debug și arată ce extrage adapterul din ea."""
     settings = load_settings()
@@ -200,6 +213,10 @@ def main(argv: list[str] | None = None) -> None:
     summary.add_argument("--profile", help="doar acest profil")
     summary.add_argument("--print", action="store_true", help="doar afișează ultimele 24 de ore, fără să trimită")
     summary.set_defaults(func=cmd_summary)
+
+    prop = sub.add_parser("property", help="istoricul unui apartament")
+    prop.add_argument("reference", help="id-ul apartamentului sau URL-ul unui anunț")
+    prop.set_defaults(func=cmd_property)
 
     dump = sub.add_parser("dump", help="salvează o pagină și arată ce extrage adapterul")
     dump.add_argument("url")
