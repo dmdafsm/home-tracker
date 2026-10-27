@@ -130,7 +130,8 @@ def assess(history: PropertyHistory, context: Context) -> Assessment:
                 "agency_not_first",
                 "large",
                 "preluat de la alt publicator",
-                f"{', '.join(names)} a publicat după prima apariție ({_platform(first)}, {original})",
+                f"{', '.join(names)} {'a' if len(names) == 1 else 'au'} publicat după prima apariție "
+                f"({_platform(first)}, {original})",
             )
         )
 

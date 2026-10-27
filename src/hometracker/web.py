@@ -234,7 +234,8 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
 
     def require_same_origin(request: Request) -> None:
         # Formularele trimit Origin (sau măcar Referer); un POST de pe alt site e refuzat (CSRF).
-        source = request.headers.get("origin") or request.headers.get("referer")
+        origin = request.headers.get("origin")
+        source = origin if origin and origin != "null" else request.headers.get("referer")
         if not source or urlsplit(source).netloc != request.headers.get("host"):
             raise HTTPException(403, "cerere din afara aplicației")
 

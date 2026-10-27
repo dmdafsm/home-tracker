@@ -57,7 +57,7 @@ def test_agencies_copying_the_owner(setup):
     assert codes(result) == ["many_publishers", "agency_not_first"]
     assert result.score == 40
     detail = result.signals[1].detail
-    assert detail == "Agenția 1, Agenția 2 a publicat după prima apariție (Storia, proprietar)"
+    assert detail == "Agenția 1, Agenția 2 au publicat după prima apariție (Storia, proprietar)"
 
 
 def test_price_far_below_comparable_apartments(setup):

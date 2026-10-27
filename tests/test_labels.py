@@ -157,6 +157,10 @@ def test_label_buttons_require_same_origin(web):
     url = f"/property/{property_id}/label/save"
     assert client.post(url).status_code == 403  # fără Origin/Referer
     assert client.post(url, headers={"origin": "https://evil.test"}).status_code == 403
+    assert client.post(url, headers={"origin": "null"}).status_code == 403  # fără Referer, „null” nu ajunge
+    # Ce trimite un browser cu politica same-origin a paginilor: Origin și Referer de pe același site.
+    browser = {"origin": "http://tracker.test", "referer": f"http://tracker.test/property/{property_id}"}
+    assert client.post(url, headers=browser, follow_redirects=False).status_code == 303
     response = client.post(url, headers=SAME_ORIGIN, follow_redirects=False)
     assert response.status_code == 303 and response.headers["location"] == f"/property/{property_id}"
     assert client.post(f"/property/{property_id}/label/delete", headers=SAME_ORIGIN).status_code == 400
