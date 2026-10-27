@@ -63,6 +63,12 @@
                    margin-right: 5px; vertical-align: -1px; background: currentColor; }
     .key.s0 { color: var(--s0); } .key.s1 { color: var(--s1); } .key.s2 { color: var(--s2); } .key.s3 { color: var(--s3); }
     .nowrap { white-space: nowrap; }
+    form.inline { display: inline; margin: 0; }
+    button { font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+             border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+    button:hover { border-color: var(--accent); }
+    button.on { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+    .actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .trust { font-weight: 600; }
     .trust.high { color: var(--good); } .trust.mid { color: var(--warn); } .trust.low { color: var(--bad); }
     ul.signals { margin: 6px 0 0; padding-left: 18px; }

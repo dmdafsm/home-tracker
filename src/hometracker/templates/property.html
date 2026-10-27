@@ -16,6 +16,13 @@
     {{ plural(history.listings|length, "anunț", "anunțuri") }}, {{ history.active|length }} active, {{ plural(history.republications|length, "republicare", "republicări") }}.
   </p>
   {% if not history.active %}<span class="tag bad">nu mai e activ pe nicio platformă</span>{% endif %}
+  {% set base = "/property/" ~ history.property_id ~ "/label/" %}
+  <div class="actions">
+    <form class="inline" method="post" action="{{ base }}{{ 'unsave' if label.saved else 'save' }}"><button class="{{ 'on' if label.saved }}">{{ "salvat ✓" if label.saved else "salvează" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'unhide' if label.hidden else 'hide' }}"><button class="{{ 'on' if label.hidden }}">{{ "ascuns ✓" if label.hidden else "ascunde" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'real' else 'real' }}"><button class="{{ 'on' if label.verdict == 'real' }}">confirmat real{{ " ✓" if label.verdict == "real" }}</button></form>
+    <form class="inline" method="post" action="{{ base }}{{ 'clear_verdict' if label.verdict == 'fake' else 'fake' }}"><button class="{{ 'on' if label.verdict == 'fake' }}">fals{{ " ✓" if label.verdict == "fake" }}</button></form>
+  </div>
 </section>
 
 <section>
@@ -55,7 +62,8 @@
         <td class="small">
           {% if listing.active %}<span class="tag good">activ</span>{% else %}<span class="tag bad">dispărut {{ day(listing.removed_at) }}</span>{% endif %}
           {% if listing.republished_from_id %}<span class="tag warn">republicare a #{{ listing.republished_from_id }}</span>{% endif %}
-          {% set label = match_label(listing) %}{% if label %}<div class="muted">{{ label }}</div>{% endif %}
+          {% set why = match_label(listing) %}{% if why %}<div class="muted">{{ why }}</div>{% endif %}
+          {% if history.listings|length > 1 %}<form class="inline" method="post" action="/listing/{{ listing.id }}/split"><button title="mută anunțul într-un apartament separat">nu e același apartament</button></form>{% endif %}
         </td>
       </tr>
     {% endfor %}

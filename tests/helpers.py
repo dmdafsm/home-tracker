@@ -79,7 +79,8 @@ PROFILE = Profile.model_validate(
             "text_any": ["gheorgheni"],
         },
         "preferences": {"balcony": 25, "known_floor": 10},
-        "notify": {"min_score": 60, "price_drop_percent": 3, "channels": ["ntfy"]},
+        # Testele vechi de scădere de preț folosesc "alerted"; "saved" e testat separat (test_labels.py).
+        "notify": {"min_score": 60, "price_drop_percent": 3, "channels": ["ntfy"], "price_drop_scope": "alerted"},
         "sources": {"storia": {"url": "https://storia.test"}, "olx": {"url": "https://olx.test"}},
     }
 )

@@ -26,6 +26,9 @@ preferences:
 notify:
   min_score: 60
   price_drop_percent: 3
+  # Scăderile de preț: doar pentru apartamentele salvate din interfață ("saved") sau pentru toate
+  # cele deja alertate ("alerted").
+  price_drop_scope: saved
   channels: [ntfy, email]
   # Rezumatul zilnic (după SUMMARY_HOUR): noi sub prag, dispărute, goluri. [] îl dezactivează.
   summary_channels: [email]

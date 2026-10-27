@@ -9,7 +9,7 @@ from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from markupsafe import Markup, escape
 from sqlalchemy import select
@@ -18,7 +18,8 @@ from sqlalchemy.orm import sessionmaker
 from .authenticity import Assessment, Context, assess
 from .config import Settings
 from .history import PropertyHistory, match_label, property_history, publisher_label
-from .models import Alert, Listing, Photo, as_utc, init_db, make_engine, utcnow
+from .labels import ACTIONS, apply_label, label_for, labels_for, split_listing
+from .models import Alert, Listing, Photo, PropertyLabel, as_utc, init_db, make_engine, utcnow
 from .notify import PLATFORM_NAMES, floor_label, format_price
 from .photos import image_path
 from .pipeline import listing_to_data
@@ -41,21 +42,31 @@ class FeedItem:
     photo_id: int | None
     alerted: bool
     assessment: Assessment
+    label: PropertyLabel | None
 
     @property
     def platforms(self) -> list[str]:
         return sorted({PLATFORM_NAMES.get(item.platform, item.platform) for item in self.history.listings})
 
 
-def feed(session, profile: Profile, *, include_removed: bool = False) -> list[FeedItem]:
+def feed(
+    session, profile: Profile, *, include_removed: bool = False, include_hidden: bool = False, only_saved: bool = False
+) -> list[FeedItem]:
     """Apartamentele cu cel puțin un anunț care trece de filtrele profilului, după scor."""
     property_ids = session.scalars(select(Listing.property_id).where(Listing.property_id.is_not(None)).distinct())
     alerted = set(
         session.scalars(select(Alert.property_id).where(Alert.profile == profile.name, Alert.kind == "new")).all()
     )
     context = Context.build(session)
+    ids = property_ids.all()
+    labels = labels_for(session, ids)
     items = []
-    for property_id in property_ids.all():
+    for property_id in ids:
+        label = labels.get(property_id)
+        if label and label.hidden and not include_hidden:
+            continue
+        if only_saved and not (label and label.saved):
+            continue
         history = property_history(session, property_id)
         if history is None or (not history.active and not include_removed):
             continue
@@ -73,6 +84,7 @@ def feed(session, profile: Profile, *, include_removed: bool = False) -> list[Fe
                 _first_photo_id(session, history),
                 property_id in alerted,
                 assess(history, context),
+                label,
             )
         )
     items.sort(key=lambda item: (-item.result.score, -as_utc(item.history.listings[-1].first_seen).timestamp()))
@@ -173,17 +185,27 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
         return {"ok": True}
 
     @app.get("/", response_class=HTMLResponse)
-    def index(request: Request, profile: str | None = None, removed: bool = False):
+    def index(
+        request: Request, profile: str | None = None, removed: bool = False, hidden: bool = False, saved: bool = False
+    ):
         available = profiles()
         if not available:
             raise HTTPException(404, "niciun profil activ")
         selected = next((p for p in available if p.name == profile), available[0])
         with sessions() as session:
-            items = feed(session, selected, include_removed=removed)
+            items = feed(session, selected, include_removed=removed, include_hidden=hidden, only_saved=saved)
             return TEMPLATES.TemplateResponse(
                 request,
                 "feed.html",
-                {"profiles": available, "profile": selected, "items": items, "removed": removed, "now": utcnow()},
+                {
+                    "profiles": available,
+                    "profile": selected,
+                    "items": items,
+                    "removed": removed,
+                    "hidden": hidden,
+                    "saved": saved,
+                    "now": utcnow(),
+                },
             )
 
     @app.get("/property/{property_id}", response_class=HTMLResponse)
@@ -205,9 +227,42 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                     "photos": photos,
                     "chart": price_chart(history),
                     "assessment": assess(history, Context.build(session)),
+                    "label": label_for(session, property_id),
                     "now": utcnow(),
                 },
             )
+
+    def require_same_origin(request: Request) -> None:
+        # Formularele trimit Origin (sau măcar Referer); un POST de pe alt site e refuzat (CSRF).
+        source = request.headers.get("origin") or request.headers.get("referer")
+        if not source or urlsplit(source).netloc != request.headers.get("host"):
+            raise HTTPException(403, "cerere din afara aplicației")
+
+    @app.post("/property/{property_id}/label/{action}")
+    def label_property(request: Request, property_id: int, action: str):
+        require_same_origin(request)
+        if action not in ACTIONS:
+            raise HTTPException(400, "acțiune necunoscută")
+        with sessions() as session:
+            try:
+                apply_label(session, property_id, action)
+            except LookupError:
+                raise HTTPException(404, "apartament inexistent") from None
+            session.commit()
+        return RedirectResponse(f"/property/{property_id}", status_code=303)
+
+    @app.post("/listing/{listing_id}/split")
+    def split(request: Request, listing_id: int):
+        require_same_origin(request)
+        with sessions() as session:
+            try:
+                new_property = split_listing(session, listing_id)
+            except LookupError:
+                raise HTTPException(404, "anunț inexistent") from None
+            except ValueError as exc:
+                raise HTTPException(400, str(exc)) from None
+            session.commit()
+        return RedirectResponse(f"/property/{new_property}", status_code=303)
 
     @app.get("/publishers", response_class=HTMLResponse)
     def publishers_page(request: Request):

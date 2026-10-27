@@ -104,6 +104,12 @@ login propriu, deci din exterior se deschide doar printr-un hostname separat al 
     service: http://localhost:8080
 ```
 
+Pe pagina unui apartament poți să-l **salvezi**, să-l **ascunzi**, să-l marchezi **confirmat real**
+sau **fals** după ce ai sunat, iar la fiecare anunț poți spune **nu e același apartament** (anunțul
+trece într-un apartament separat). Scăderile de preț trimit alertă doar pentru apartamentele
+salvate (`notify.price_drop_scope` în profil); cele ascunse sau false nu mai trimit alerte și nu
+mai apar în rezumat. Feed-ul are filtre pentru salvate, ascunse și dispărute.
+
 Fiecare apartament are un **scor de autenticitate** (0–100) cu semnalele care l-au scăzut:
 aceleași poze la mai mulți publicatori, o agenție care a publicat după proprietar, un preț mult
 sub mediana apartamentelor asemănătoare, un „proprietar” cu telefonul la multe apartamente, poze

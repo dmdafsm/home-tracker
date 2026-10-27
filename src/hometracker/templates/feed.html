@@ -13,11 +13,10 @@
     </span>
   {% endif %}
   <span>{{ plural(items|length, "apartament", "apartamente") }}</span>
-  {% if removed %}
-    <a href="/?profile={{ profile.name|urlencode }}">doar active</a>
-  {% else %}
-    <a href="/?profile={{ profile.name|urlencode }}&amp;removed=1">include dispărute</a>
-  {% endif %}
+  {% set base = "/?profile=" ~ (profile.name|urlencode) %}
+  {% if saved %}<a href="{{ base }}">toate</a>{% else %}<a href="{{ base }}&amp;saved=1">doar salvate</a>{% endif %}
+  {% if removed %}<a href="{{ base }}">doar active</a>{% else %}<a href="{{ base }}&amp;removed=1">include dispărute</a>{% endif %}
+  {% if hidden %}<a href="{{ base }}">fără ascunse</a>{% else %}<a href="{{ base }}&amp;hidden=1">include ascunse</a>{% endif %}
 </div>
 {% if items %}
 <div class="cards">
@@ -43,6 +42,10 @@
       <div>
         {% if not h.active %}<span class="tag bad">dispărut</span>{% endif %}
         {% if h.republications %}<span class="tag warn">{{ plural(h.republications|length, "republicare", "republicări") }}</span>{% endif %}
+        {% if item.label and item.label.saved %}<span class="tag good">salvat</span>{% endif %}
+        {% if item.label and item.label.hidden %}<span class="tag">ascuns</span>{% endif %}
+        {% if item.label and item.label.verdict == "real" %}<span class="tag good">confirmat real</span>{% endif %}
+        {% if item.label and item.label.verdict == "fake" %}<span class="tag bad">fals</span>{% endif %}
         {% set a = item.assessment %}
         <span class="tag trust {{ 'high' if a.score >= 70 else ('mid' if a.score >= 40 else 'low') }}" title="{% for s in a.signals %}{{ s.label }}: {{ s.detail }}{% if not loop.last %}; {% endif %}{% endfor %}">autenticitate {{ a.score }}</span>
         {% if item.alerted %}<span class="tag good">alertat</span>{% elif item.result.score < profile.notify.min_score %}<span class="tag">sub pragul de alertă</span>{% endif %}

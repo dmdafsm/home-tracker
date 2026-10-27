@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -52,6 +53,9 @@ class NotifySettings(BaseModel):
     min_score: float = 60
     price_drop_percent: float = 3
     channels: list[str] = Field(default_factory=lambda: ["ntfy"])
+    # Scăderile de preț: doar pentru apartamentele salvate din interfață ("saved", ca în plan) sau pentru
+    # toate cele pentru care s-a trimis deja o alertă ("alerted").
+    price_drop_scope: Literal["saved", "alerted"] = "saved"
     # Alertele instant pentru apartamente noi cer și un scor de autenticitate cel puțin atât (0 = oricât).
     min_authenticity: float = 0
     # Rezumatul zilnic; o listă goală îl dezactivează.

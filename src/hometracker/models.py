@@ -173,6 +173,30 @@ class RunLog(Base):
     error: Mapped[str | None] = mapped_column(Text)
 
 
+class PropertyLabel(Base):
+    """Starea pusă de utilizator pe un apartament: salvat, ascuns, verdict după ce a sunat."""
+
+    __tablename__ = "property_label"
+
+    property_id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    saved: Mapped[bool] = mapped_column(Boolean, default=False)
+    hidden: Mapped[bool] = mapped_column(Boolean, default=False)
+    verdict: Mapped[str | None] = mapped_column(String(16))  # real / fake
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class LabelEvent(Base):
+    """Fiecare acțiune din interfață, păstrată pentru calibrarea ponderilor (deduplicare, autenticitate)."""
+
+    __tablename__ = "label_event"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    property_id: Mapped[int] = mapped_column(Integer, index=True)
+    listing_id: Mapped[int | None] = mapped_column(Integer)
+    action: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class SummaryLog(Base):
     """Un rezumat zilnic trimis, ca să știm de unde începe următorul și să nu-l repetăm."""
 
