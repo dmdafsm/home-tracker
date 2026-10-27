@@ -16,8 +16,31 @@ from .notify import PLATFORM_NAMES, floor_label, format_price
 PUBLISHER_TYPES = {"owner": "proprietar", "agency": "agenție"}
 
 
+SIGNAL_LABELS = {
+    "phone": "același telefon",
+    "area": "aceeași suprafață",
+    "floor": "același etaj",
+    "rooms": "același număr de camere",
+    "near": "la sub 300 m",
+}
+
+
+def signal_label(signal: str) -> str:
+    name, _, value = signal.partition(":")
+    if name == "photos":
+        return f"{value} poze comune" if value != "1" else "o poză comună"
+    if name == "text":
+        return f"text asemănător {float(value):.0%}"
+    return SIGNAL_LABELS.get(name, name)
+
+
 def match_label(listing: Listing) -> str | None:
     """De ce a fost legat anunțul de apartament, în cuvinte."""
+    if listing.match_reason == "score" and listing.match_signals:
+        signals = ", ".join(signal_label(s) for s in listing.match_signals.split(","))
+        target = f" cu anunțul {listing.matched_listing_id}" if listing.matched_listing_id else ""
+        return f"legat{target} (scor {listing.match_score:.2f}: {signals})"
+    # Rânduri salvate înainte de scorul combinat.
     if listing.match_reason == "photos":
         return f"legat prin {listing.shared_photos} poze comune"
     if listing.match_reason == "photo+attributes":

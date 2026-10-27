@@ -85,10 +85,15 @@ class Listing(Base):
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
 
     property_id: Mapped[int | None] = mapped_column(ForeignKey("property.id"), index=True)
-    # De ce a fost legat de apartament: "new" (apartament nou), "photos" (poze comune) sau
-    # "photo+attributes" (o poză comună, aceeași suprafață și același etaj).
+    # De ce a fost legat de apartament: "new" (apartament nou) sau "score" (scorul combinat din dedup.py,
+    # cu semnalele în match_signals, de exemplu "photos:2,text:0.62,area,floor"). Rândurile mai vechi pot
+    # avea "photos" sau "photo+attributes". Coloana rămâne scurtă: tipul ei nu se schimbă în bazele existente.
     match_reason: Mapped[str | None] = mapped_column(String(32))
+    match_signals: Mapped[str | None] = mapped_column(String(128))
     shared_photos: Mapped[int | None] = mapped_column(Integer)
+    match_score: Mapped[float | None] = mapped_column(Float)
+    # Anunțul cu care s-a potrivit cel mai bine când a fost legat de apartament.
+    matched_listing_id: Mapped[int | None] = mapped_column(Integer)
     # Anunțul anterior al aceluiași publicator, pe aceeași platformă, pentru același apartament.
     republished_from_id: Mapped[int | None] = mapped_column(Integer, index=True)
     property: Mapped[Property | None] = relationship(back_populates="listings")

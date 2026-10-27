@@ -24,9 +24,12 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
 - **Profilurile** stau în `profiles/*.yaml`. Fiecare are filtre dure (preț, etaj,
   suprafață, cuvinte cheie), preferințe care dau scorul (de exemplu balconul) și
   URL-urile de căutare de pe fiecare platformă.
-- **Deduplicarea** leagă două anunțuri de același apartament când au cel puțin 2 poze
-  comune (pHash). O singură poză comună e acceptată doar dacă suprafața și etajul se
-  potrivesc, pentru că agențiile refolosesc poze cu fațada blocului.
+- **Deduplicarea** leagă două anunțuri de același apartament după un scor combinat: poze
+  comune (pHash și dHash), text asemănător (fără textul-șablon al agențiilor), același telefon
+  de proprietar, suprafață, etaj, camere și distanță. Două poze comune ajung; o singură poză
+  (de obicei fațada blocului) cere aceeași suprafață și același etaj. O contradicție clară
+  (alt etaj, altă suprafață, la peste 1 km) ține anunțurile separate. `hometracker property`
+  arată pentru fiecare anunț scorul și semnalele care l-au legat.
 - **Alertele** se trimit o singură dată pe apartament și profil, oricâte platforme îl
   publică. O scădere de preț de peste 3% generează o alertă separată.
 - **Reverificarea zilnică**: anunțurile potrivite care nu mai apar în primele pagini de
