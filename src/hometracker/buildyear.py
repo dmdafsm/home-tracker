@@ -3,7 +3,7 @@
 Nu există o sursă publică unică și gratuită cu anul fiecărui bloc. Combinăm ce avem și arătăm de
 unde vine fiecare parte. Ordinea de încredere: OpenStreetMap (`start_date` pe clădire), apoi anii
 declarați în anunțuri (confirmați de cel puțin două anunțuri diferite), apoi tipologia blocului.
-Extrasul CF de la ANCPI rămâne sursa sigură pentru apartamentul ales (vezi docs/surse-an-constructie.md).
+Pentru apartamentul ales, anul se confirmă manual din documente (vezi docs/surse-an-constructie.md).
 """
 
 from __future__ import annotations

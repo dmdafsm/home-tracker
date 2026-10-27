@@ -44,7 +44,7 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
 - **Anul construcției** e un interval cu sursa lui: anul din OpenStreetMap pentru clădirea
   de la coordonatele anunțului (cel mult `OSM_LOOKUPS_PER_RUN` interogări pe rulare, păstrate
   local), altfel anii declarați în anunțuri (și ale altor apartamente din același bloc), apoi
-  tipologia blocului. Sursa sigură rămâne extrasul CF; vezi
+  tipologia blocului. Pentru apartamentul ales, anul se confirmă din documente; vezi
   [docs/surse-an-constructie.md](docs/surse-an-constructie.md).
 - **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
