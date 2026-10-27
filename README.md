@@ -104,6 +104,11 @@ login propriu, deci din exterior se deschide doar printr-un hostname separat al 
     service: http://localhost:8080
 ```
 
+Pagina **Publicatori** arată, pentru fiecare agenție sau proprietar, câte anunțuri active are, câte
+apartamente, ce procent a preluat de la alții (apartamentul apăruse întâi la alt publicator) și
+cu cât e în medie mai scump sau mai ieftin decât ceilalți pentru aceleași apartamente. Un
+„proprietar” al cărui telefon apare la 5 sau mai multe apartamente e marcat ca posibil agent.
+
 Pentru lucrul la interfață fără date reale: `DATA_DIR=data/demo uv run hometracker demo`,
 apoi `DATA_DIR=data/demo uv run hometracker web --port 8081`.
 
@@ -171,6 +176,8 @@ rulări locale în afara Docker.
 | `src/hometracker/profiles.py` | profilurile YAML și calculul scorului |
 | `src/hometracker/dedup.py` | gruparea anunțurilor pe apartamente, după poze, și republicările |
 | `src/hometracker/history.py` | istoricul unui apartament |
+| `src/hometracker/publishers.py` | publicatorii: anunțuri preluate, diferențe de preț, posibili agenți |
+| `src/hometracker/web.py` | interfața web: apartamente, publicatori |
 | `src/hometracker/summary.py` | rezumatul zilnic |
 | `src/hometracker/pipeline.py` | o rulare completă: căutare, detaliu, salvare, alerte |
 | `src/hometracker/notify.py` | ntfy și email |

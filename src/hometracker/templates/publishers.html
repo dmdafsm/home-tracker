@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Publicatori · home-tracker{% endblock %}
+{% block content %}
+<section>
+  <h2>Publicatori ({{ stats|length }})</h2>
+  <p class="small muted">
+    „Preluate” înseamnă anunțuri pentru apartamente care apăruseră întâi la alt publicator (de obicei
+    agenții care preiau pozele proprietarului). Diferența de preț e față de cel mai mic preț activ al
+    celorlalți publicatori pentru același apartament.
+  </p>
+  {% if stats %}
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Publicator</th><th>Tip declarat</th><th>Platforme</th><th>Active</th><th>Apartamente</th><th>Preluate</th><th>Dif. medie preț</th></tr></thead>
+    <tbody>
+    {% for s in stats %}
+      <tr>
+        <td><a href="/publisher/{{ s.publisher.id }}">{{ s.publisher.name or ("telefon ascuns" if s.publisher.phone_hash else "fără nume") }}</a>
+          {% if s.disguised_agent %}<span class="tag bad" title="proprietar cu telefonul la {{ agent_threshold }}+ apartamente">posibil agent</span>{% endif %}</td>
+        <td>{{ {"owner": "proprietar", "agency": "agenție"}.get(s.publisher.declared_type, "necunoscut") }}</td>
+        <td class="small">{% for p in s.platforms %}{{ platform(p) }}{% if not loop.last %}, {% endif %}{% endfor %}</td>
+        <td>{{ s.active|length }}</td>
+        <td>{{ s.properties|length }}</td>
+        <td class="nowrap">{% if s.taken_over_share is not none %}{{ (s.taken_over_share * 100)|round|int }}%{% else %}–{% endif %}</td>
+        <td class="nowrap">{% set d = s.average_price_difference %}{% if d is none %}–{% else %}{{ "+" if d > 0 else "" }}{{ price(d) }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <div class="empty">Niciun publicator cunoscut încă.</div>
+  {% endif %}
+</section>
+{% endblock %}

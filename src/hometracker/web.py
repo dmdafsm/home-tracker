@@ -22,6 +22,7 @@ from .notify import PLATFORM_NAMES, floor_label, format_price
 from .photos import image_path
 from .pipeline import listing_to_data
 from .profiles import MatchResult, Profile, load_profiles, match
+from .publishers import DISGUISED_AGENT_PROPERTIES, publisher_stats
 
 TEMPLATES = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 
@@ -188,6 +189,30 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                 request,
                 "property.html",
                 {"history": history, "photos": photos, "chart": price_chart(history), "now": utcnow()},
+            )
+
+    @app.get("/publishers", response_class=HTMLResponse)
+    def publishers_page(request: Request):
+        with sessions() as session:
+            return TEMPLATES.TemplateResponse(
+                request,
+                "publishers.html",
+                {"stats": publisher_stats(session), "agent_threshold": DISGUISED_AGENT_PROPERTIES},
+            )
+
+    @app.get("/publisher/{publisher_id}", response_class=HTMLResponse)
+    def publisher_page(request: Request, publisher_id: int):
+        with sessions() as session:
+            found = publisher_stats(session, publisher_id)
+            if not found:
+                raise HTTPException(404, "publicator inexistent")
+            stats = found[0]
+            listings = sorted(stats.listings, key=lambda item: as_utc(item.first_seen), reverse=True)
+            taken = {listing.id for listing in stats.taken_over}
+            return TEMPLATES.TemplateResponse(
+                request,
+                "publisher.html",
+                {"stats": stats, "listings": listings, "taken": taken, "agent_threshold": DISGUISED_AGENT_PROPERTIES},
             )
 
     @app.get("/photo/{photo_id}")

@@ -35,7 +35,7 @@
       <tr>
         <td>{{ listing.id }}</td>
         <td>{% set link = safe_url(listing.url) %}{% if link %}<a href="{{ link }}" rel="noopener noreferrer" target="_blank">{{ platform(listing.platform) }}</a>{% else %}{{ platform(listing.platform) }}{% endif %}</td>
-        <td>{{ publisher(listing) }}</td>
+        <td>{% if listing.publisher_id %}<a href="/publisher/{{ listing.publisher_id }}">{{ publisher(listing) }}</a>{% else %}{{ publisher(listing) }}{% endif %}</td>
         <td class="nowrap">{{ price(listing.price_eur) }}</td>
         <td class="small"><span class="nowrap">{{ day(listing.first_seen) }}</span> – <span class="nowrap">{{ day(listing.last_seen) }}</span></td>
         <td class="small">

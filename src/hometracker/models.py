@@ -46,6 +46,20 @@ class Property(Base):
     listings: Mapped[list[Listing]] = relationship(back_populates="property")
 
 
+class Publisher(Base):
+    """Cine publică: identificat prin telefon (hash) sau, fără telefon, prin numele normalizat."""
+
+    __tablename__ = "publisher"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key: Mapped[str] = mapped_column(String(160), unique=True)
+    name: Mapped[str | None] = mapped_column(String(256))
+    declared_type: Mapped[str | None] = mapped_column(String(16))  # ce declară anunțurile: owner / agency
+    phone_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 class Listing(Base):
     """O apariție a unui anunț pe o platformă."""
 
@@ -73,6 +87,7 @@ class Listing(Base):
     publisher_name: Mapped[str | None] = mapped_column(String(256))
     publisher_type: Mapped[str | None] = mapped_column(String(16))  # owner / agency / unknown
     phone_hash: Mapped[str | None] = mapped_column(String(64), index=True)
+    publisher_id: Mapped[int | None] = mapped_column(Integer, index=True)
 
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     first_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

@@ -19,6 +19,7 @@ from .notify import PLATFORM_NAMES, Message, Notifier, floor_label, format_price
 from .parsing import phone_hash
 from .photos import image_hashes, save_image
 from .profiles import MatchResult, Profile, match
+from .publishers import link_missing_publishers, link_publisher
 from .schema import ListingData
 
 log = logging.getLogger(__name__)
@@ -75,6 +76,10 @@ class Pipeline:
 
     def run(self, profiles: list[Profile], pages: int) -> RunStats:
         stats = RunStats()
+        with self.sessions() as session:
+            if linked := link_missing_publishers(session):
+                log.info("%d anunțuri legate de publicatori", linked)
+            session.commit()
         for profile in profiles:
             for platform, source in profile.sources.items():
                 if not source.enabled:
@@ -159,6 +164,7 @@ class Pipeline:
                 result = match(profile, data)
             photo_urls = data.photo_urls
 
+        link_publisher(session, listing)
         if result.passed:
             if not listing.photos:
                 self._download_photos(session, listing, photo_urls)

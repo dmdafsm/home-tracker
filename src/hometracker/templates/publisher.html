@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% set p = stats.publisher %}
+{% block title %}{{ p.name or "Publicator" }} · home-tracker{% endblock %}
+{% block content %}
+<section>
+  <h2>{{ p.name or ("telefon ascuns" if p.phone_hash else "fără nume") }}</h2>
+  <div>
+    <span class="tag">{{ {"owner": "proprietar", "agency": "agenție"}.get(p.declared_type, "tip necunoscut") }}</span>
+    {% if stats.disguised_agent %}<span class="tag bad">posibil agent: telefonul apare la {{ stats.properties|length }} apartamente</span>{% endif %}
+  </div>
+  <p class="small muted">
+    {{ plural(stats.listings|length, "anunț", "anunțuri") }}, {{ stats.active|length }} active,
+    {{ plural(stats.properties|length, "apartament", "apartamente") }},
+    {{ plural(stats.taken_over|length, "preluat", "preluate") }} de la alți publicatori.
+    Văzut din {{ day(p.first_seen) }} până pe {{ day(p.last_seen) }}.
+    {% set d = stats.average_price_difference %}{% if d is not none %}Față de ceilalți publicatori ai acelorași apartamente: în medie {{ "+" if d > 0 else "" }}{{ price(d) }}.{% endif %}
+  </p>
+</section>
+<section>
+  <h2>Anunțuri</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Apartament</th><th>Platformă</th><th>Preț</th><th>Văzut</th><th>Stare</th></tr></thead>
+    <tbody>
+    {% for listing in listings %}
+      <tr>
+        <td>{% if listing.property_id %}<a href="/property/{{ listing.property_id }}">{{ listing.title|truncate(60) }}</a>{% else %}{{ listing.title|truncate(60) }}{% endif %}</td>
+        <td>{{ platform(listing.platform) }}</td>
+        <td class="nowrap">{{ price(listing.price_eur) }}</td>
+        <td class="small"><span class="nowrap">{{ day(listing.first_seen) }}</span> – <span class="nowrap">{{ day(listing.last_seen) }}</span></td>
+        <td class="small">
+          {% if listing.active %}<span class="tag good">activ</span>{% else %}<span class="tag bad">dispărut</span>{% endif %}
+          {% if listing.id in taken %}<span class="tag warn">preluat</span>{% endif %}
+          {% if listing.republished_from_id %}<span class="tag warn">republicare</span>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endblock %}
