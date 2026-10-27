@@ -5,7 +5,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .models import LabelEvent, Listing, Property, PropertyLabel, utcnow
+from .models import DistinctProperties, LabelEvent, Listing, Property, PropertyLabel, utcnow
 
 ACTIONS = {
     "save": ("saved", True),
@@ -71,5 +71,7 @@ def split_listing(session: Session, listing_id: int) -> int:
         if sibling.republished_from_id == listing.id:
             sibling.republished_from_id = None
     session.add(LabelEvent(property_id=old_property, listing_id=listing.id, action="not_same"))
+    # Apartamentul nou nu mai e sugerat ca „posibil același” cu cel din care a fost scos.
+    session.add(DistinctProperties(property_a=old_property, property_b=new.id))
     session.flush()
     return new.id

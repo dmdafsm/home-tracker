@@ -117,6 +117,12 @@ trece într-un apartament separat). Scăderile de preț trimit alertă doar pent
 salvate (`notify.price_drop_scope` în profil); cele ascunse sau false nu mai trimit alerte și nu
 mai apar în rezumat. Feed-ul are filtre pentru salvate, ascunse și dispărute.
 
+Când mai multe agenții fotografiază același apartament, pozele diferă și gruparea automată le
+lasă separate. Apartamentele cu același etaj și număr de camere, suprafață la cel mult 5 mp, preț
+la cel mult 2% și aproape pe hartă apar ca **posibil același apartament** (pe card și pe pagina
+apartamentului), cu butoanele **e același apartament** (le unește, fără alerte noi) și **nu e același**
+(nu le mai sugerează).
+
 Fiecare apartament are un **scor de autenticitate** (0–100) cu semnalele care l-au scăzut:
 aceleași poze la mai mulți publicatori, o agenție care a publicat după proprietar, un preț mult
 sub mediana apartamentelor asemănătoare, un „proprietar” cu telefonul la multe apartamente, poze
