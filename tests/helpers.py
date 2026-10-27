@@ -34,9 +34,11 @@ class FakeClient:
 class FakeNotifier:
     def __init__(self):
         self.sent = []
+        self.destinations = []
 
-    def send(self, message, channels):
+    def send(self, message, channels, **destinations):
         self.sent.append(message)
+        self.destinations.append(destinations)
         return channels
 
     @property

@@ -77,7 +77,9 @@ docker compose exec worker hometracker test-notify ntfy
 
 În aplicația ntfy de pe telefon: adaugă serverul din `NTFY_PUBLIC_URL`, autentifică-te
 cu utilizatorul creat mai sus și abonează-te la topicul din `NTFY_TOPIC` (implicit
-`apartamente`).
+`apartamente`). Un profil poate avea topicul și adresa de email proprii
+(`notify.ntfy_topic`, `notify.email_to`), de exemplu pentru căutarea altcuiva; verifică-le cu
+`hometracker test-notify --profile <nume>`.
 
 ### Acces din exterior (Cloudflare Tunnel)
 

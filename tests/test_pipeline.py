@@ -85,3 +85,20 @@ def test_price_dropping_into_range_alerts_as_new(setup):
     run()
     assert len(notifier.alerts) == 1
     assert notifier.alerts[0].title.startswith("Apartament nou · 162.000 €")
+
+
+def test_alerts_go_to_the_profile_destinations(setup, tmp_path):
+    from helpers import PROFILE, FakeClient, make_adapter
+
+    from hometracker.config import Settings
+    from hometracker.pipeline import Pipeline
+
+    catalog, notifier, sessions, _run = setup
+    catalog["storia"] = [listing("storia", "s1", [])]
+    notify = PROFILE.notify.model_copy(update={"ntfy_topic": "mama", "email_to": "mama@example.test"})
+    profile = PROFILE.model_copy(update={"notify": notify})
+    adapters = {"storia": make_adapter("storia", catalog, {})}
+    settings = Settings(data_dir=tmp_path, osm_lookups_per_run=0)
+    Pipeline(settings, sessions, FakeClient({}), notifier, adapters=adapters).run([profile], 1)
+    assert len(notifier.alerts) == 1
+    assert notifier.destinations[-1] == {"ntfy_topic": "mama", "email_to": "mama@example.test"}

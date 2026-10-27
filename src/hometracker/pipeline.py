@@ -494,6 +494,7 @@ class Pipeline:
                 priority=4 if kind == "new" else 3,
             ),
             profile.notify.channels,
+            **profile.notify.destinations(),
         )
         session.add(
             Alert(
@@ -521,6 +522,7 @@ class Pipeline:
         self.notifier.send(
             Message(title="home-tracker: problemă la colectare", body=text, tags=["warning"], priority=2),
             profile.notify.channels,
+            **profile.notify.destinations(),
         )
 
 

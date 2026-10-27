@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from hometracker.profiles import Profile, load_profiles, match
 from hometracker.schema import ListingData
 
@@ -78,3 +80,58 @@ def test_excluded_words_reject():
 def test_integer_floor_in_yaml_is_accepted():
     p = Profile.model_validate({"name": "t", "filters": {"floors": [1, "ground"]}})
     assert p.filters.floors == ["1", "ground"]
+
+
+# ------------------------------------------------- destinații pe profil
+
+
+def test_profile_destinations_are_validated():
+    from pydantic import ValidationError
+
+    from hometracker.profiles import NotifySettings
+
+    assert NotifySettings().destinations() == {}
+    custom = NotifySettings(ntfy_topic="mama-cluj", email_to="a@example.test ,b@example.test")
+    assert custom.destinations() == {"ntfy_topic": "mama-cluj", "email_to": "a@example.test, b@example.test"}
+    for bad in ({"ntfy_topic": "cu spații"}, {"email_to": "x@example.test\nBcc: y@example.test"}, {"email_to": "nu"}):
+        with pytest.raises(ValidationError):
+            NotifySettings(**bad)
+
+
+def test_notifier_uses_profile_destinations(monkeypatch):
+    from hometracker.config import Settings
+    from hometracker.notify import Message, Notifier
+
+    posted, mailed = [], []
+    monkeypatch.setattr(
+        "hometracker.notify.httpx.post",
+        lambda url, json, headers, timeout: (
+            posted.append(json["topic"]) or type("R", (), {"raise_for_status": lambda s: None})()
+        ),
+    )
+
+    class FakeSMTP:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+        def starttls(self):
+            pass
+
+        def send_message(self, email):
+            mailed.append(email["To"])
+
+    monkeypatch.setattr("hometracker.notify.smtplib.SMTP", FakeSMTP)
+    settings = Settings(
+        ntfy_url="http://ntfy.test", ntfy_topic="implicit", smtp_host="smtp.test", email_to="eu@example.test"
+    )
+    notifier = Notifier(settings)
+    message = Message(title="t", body="b")
+    assert notifier.send(message, ["ntfy", "email"]) == ["ntfy", "email"]
+    notifier.send(message, ["ntfy", "email"], ntfy_topic="mama", email_to="mama@example.test")
+    assert posted == ["implicit", "mama"] and mailed == ["eu@example.test", "mama@example.test"]

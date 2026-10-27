@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -60,6 +61,31 @@ class NotifySettings(BaseModel):
     min_authenticity: float = 0
     # Rezumatul zilnic; o listă goală îl dezactivează.
     summary_channels: list[str] = Field(default_factory=lambda: ["email"])
+    # Destinații proprii profilului; lipsă = cele din .env (NTFY_TOPIC, EMAIL_TO).
+    ntfy_topic: str | None = None
+    email_to: str | None = None
+
+    @field_validator("ntfy_topic")
+    @classmethod
+    def _valid_topic(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", value):
+            raise ValueError("topicul ntfy are doar litere, cifre, - și _ (cel mult 64)")
+        return value
+
+    @field_validator("email_to")
+    @classmethod
+    def _valid_email(cls, value: str | None) -> str | None:
+        # Ajunge într-un header de email: fără linii noi, doar adrese separate prin virgulă.
+        if value is not None:
+            addresses = [item.strip() for item in value.split(",")]
+            if not all(re.fullmatch(r"[^@\s,<>]+@[^@\s,<>]+\.[^@\s,<>]+", item) for item in addresses):
+                raise ValueError("adresă de email invalidă")
+            value = ", ".join(addresses)
+        return value
+
+    def destinations(self) -> dict[str, str]:
+        """Argumentele pentru Notifier.send: doar destinațiile setate în profil."""
+        return {key: value for key in ("ntfy_topic", "email_to") if (value := getattr(self, key))}
 
 
 class Source(BaseModel):

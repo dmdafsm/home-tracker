@@ -135,8 +135,8 @@ def test_failed_delivery_is_retried(db):
     settings, sessions = db
 
     class Silent(FakeNotifier):
-        def send(self, message, channels):
-            super().send(message, channels)
+        def send(self, message, channels, **destinations):
+            super().send(message, channels, **destinations)
             return []
 
     assert send_due_summaries(sessions, [STRICT], Silent(), settings, now=NOW) == 0
@@ -162,7 +162,7 @@ def test_long_summary_is_shortened_for_ntfy_only(db):
     )
 
     class PerChannel(FakeNotifier):
-        def send(self, message, channels):
+        def send(self, message, channels, **destinations):
             self.sent.extend((channel, message) for channel in channels)
             return channels
 

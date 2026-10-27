@@ -35,6 +35,9 @@ notify:
   # Alertele instant cer și un scor de autenticitate cel puțin atât (0–100). 30 oprește doar
   # apartamentele cu cel puțin trei semnale mari; restul primesc alerta, cu semnalele în mesaj.
   min_authenticity: 30
+  # Destinații proprii profilului (opțional); fără ele se folosesc NTFY_TOPIC și EMAIL_TO din .env.
+  # ntfy_topic: apartamente-mama
+  # email_to: cineva@example.com
 
 # Căutările de pe fiecare platformă. Cel mai sigur: setează filtrele pe site,
 # în browser, și copiază aici URL-ul rezultat, sortat după cele mai noi.

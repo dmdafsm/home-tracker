@@ -208,13 +208,14 @@ def send_summary(
     with sessions() as session:
         message = format_summary(build_summary(session, profile, start, end, settings), settings)
         channels = profile.notify.summary_channels
+        to = profile.notify.destinations()
         if "ntfy" in channels and len(message.body.encode()) > NTFY_LIMIT:
             # Emailul primește tot textul; ntfy doar începutul.
-            delivered = notifier.send(message, [c for c in channels if c != "ntfy"])
+            delivered = notifier.send(message, [c for c in channels if c != "ntfy"], **to)
             body = message.body.encode()[:NTFY_LIMIT].decode(errors="ignore") + "\n…"
-            delivered += notifier.send(replace(message, body=body), ["ntfy"])
+            delivered += notifier.send(replace(message, body=body), ["ntfy"], **to)
         else:
-            delivered = notifier.send(message, channels)
+            delivered = notifier.send(message, channels, **to)
         if not delivered:
             log.warning("rezumatul pentru %s nu a putut fi trimis; reîncerc la rularea următoare", profile.name)
             return False
