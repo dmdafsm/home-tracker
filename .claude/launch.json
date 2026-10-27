@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": ["run", "hometracker", "web"],
+      "port": 8080
+    },
+    {
+      "name": "web-demo",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "DATA_DIR=data/demo uv run hometracker web --port 8081"],
+      "port": 8081
+    }
+  ]
+}

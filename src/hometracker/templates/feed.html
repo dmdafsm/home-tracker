@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ profile.name }} · home-tracker{% endblock %}
+{% block header %}
+  <span class="muted">{{ profile.description or profile.name }}</span>
+{% endblock %}
+{% block content %}
+<div class="filters small">
+  {% if profiles|length > 1 %}
+    <span>Profil:
+      {% for p in profiles %}
+        {% if p.name == profile.name %}<strong>{{ p.name }}</strong>{% else %}<a href="/?profile={{ p.name|urlencode }}">{{ p.name }}</a>{% endif %}
+      {% endfor %}
+    </span>
+  {% endif %}
+  <span>{{ plural(items|length, "apartament", "apartamente") }}</span>
+  {% if removed %}
+    <a href="/?profile={{ profile.name|urlencode }}">doar active</a>
+  {% else %}
+    <a href="/?profile={{ profile.name|urlencode }}&amp;removed=1">include dispărute</a>
+  {% endif %}
+</div>
+{% if items %}
+<div class="cards">
+  {% for item in items %}
+  {% set h = item.history %}
+  {% set range = h.price_range() %}
+  <a class="card" href="/property/{{ h.property_id }}">
+    {% if item.photo_id %}
+      <img src="/photo/{{ item.photo_id }}" alt="" loading="lazy">
+    {% else %}
+      <div class="noimg">fără poză</div>
+    {% endif %}
+    <div class="body">
+      <div>
+        <span class="score" title="{{ item.result.reasons|join(', ') }}">{{ item.result.score|round|int }}</span>
+        <span class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</span>
+      </div>
+      <div>{{ floor(item.listing.floor) }}{% if item.listing.area_m2 %} · {{ area(item.listing.area_m2) }}{% endif %}{% if item.listing.rooms %} · {{ item.listing.rooms }} cam.{% endif %}</div>
+      <div class="small">{{ item.listing.title|truncate(80) }}</div>
+      <div class="small muted">
+        {{ plural(h.listings|length, "anunț", "anunțuri") }} · {{ item.platforms|join(', ') }} · {{ plural(h.days_on_market(now), "zi", "zile") }} pe piață
+      </div>
+      <div>
+        {% if not h.active %}<span class="tag bad">dispărut</span>{% endif %}
+        {% if h.republications %}<span class="tag warn">{{ plural(h.republications|length, "republicare", "republicări") }}</span>{% endif %}
+        {% if item.alerted %}<span class="tag good">alertat</span>{% elif item.result.score < profile.notify.min_score %}<span class="tag">sub pragul de alertă</span>{% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty">Niciun apartament care să treacă de filtrele profilului, deocamdată.</div>
+{% endif %}
+{% endblock %}

@@ -9,9 +9,9 @@ A single Python package (`src/hometracker`) with an argparse CLI, run by Docker 
 | `db` | `postgres:16-alpine` | the database (`pgdata` volume) | not published |
 | `worker` | built from `Dockerfile` | `hometracker loop`: collection, matching, dedup, alerts | not published |
 | `ntfy` | `binwiederhier/ntfy` | push notifications for the phone (`ntfydata` volume) | `127.0.0.1:8090` |
-| `web` | planned (stage 2) | FastAPI interface | `127.0.0.1:8080` |
+| `web` | built from `Dockerfile` | `hometracker web`: feed and apartment pages, read-only ([ADR 0004](engineering/decisions/0004-web-interface.md)) | `127.0.0.1:8080` |
 
-`./data` and `./profiles` are bind-mounted into the worker. Outside access is a tunnel configured outside this repository (for example Cloudflare Tunnel) that routes one hostname to ntfy and, later, one behind Cloudflare Access to the web interface. See [ADR 0001](engineering/decisions/0001-docker-compose.md).
+`./data` and `./profiles` are bind-mounted into the worker, and read-only into `web`. Outside access is a tunnel configured outside this repository (for example Cloudflare Tunnel) that routes one hostname to ntfy and, later, one behind Cloudflare Access to the web interface. See [ADR 0001](engineering/decisions/0001-docker-compose.md).
 
 ## Data flow
 
@@ -34,7 +34,9 @@ profiles/*.yaml ──> pipeline ──> adapter.search(url) ──> PoliteClien
 - **Pipeline** (`pipeline.py`) runs a profile across its sources, stores listings and snapshots, downloads photos for matching listings, assigns properties, sends alerts and warns when an adapter errors or returns nothing. After the searches it rechecks matched listings that have left the search results (see below).
 - **Notifications** (`notify.py`): ntfy (JSON publish, token auth) and SMTP email.
 - **Daily summary** (`summary.py`): after each run in `loop`, a profile whose summary is due (first run after `SUMMARY_HOUR` local time, once per local day) gets a message on `notify.summary_channels` (email by default) covering the period since the last summary (24 h the first time, at most 7 days): new listings that passed the filters but stayed under the alert threshold, listings that disappeared, republications, collection gaps longer than two intervals, and the number of instant alerts sent. A summary that no channel delivered is not recorded and is retried at the next run. ntfy gets a shortened body.
-- **CLI** (`cli.py`): `loop`, `run [--catchup]`, `summary [--print]`, `property <id|url>`, `dump <url>`, `test-notify`, `matches`.
+- **Web** (`web.py`, `templates/`): FastAPI with Jinja2 rendered on the server, no JavaScript. `/` is the feed for a profile (apartments with at least one listing that passes the profile, ordered by the profile score; `?removed=1` includes apartments no longer active), `/property/{id}` the apartment page (listings, publishers, match signals, price chart as inline SVG, price table, photos), `/photo/{id}` a local photo, only if its stored path is inside `data/photos`. Listing links are rendered only for `http(s)` URLs. The app only reads.
+- **Demo data** (`demo.py`): `hometracker demo` fills an empty database with synthetic apartments, for working on the interface (`DATA_DIR=data/demo`, preview configuration `web-demo` in `.claude/launch.json`).
+- **CLI** (`cli.py`): `loop`, `run [--catchup]`, `summary [--print]`, `property <id|url>`, `web`, `demo`, `dump <url>`, `test-notify`, `matches`.
 
 ## Tables and ownership
 

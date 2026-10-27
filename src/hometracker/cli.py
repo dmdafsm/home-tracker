@@ -1,4 +1,4 @@
-"""Linia de comandă: `hometracker loop | run | summary | property | dump | test-notify | matches`."""
+"""Linia de comandă: `hometracker loop | run | summary | property | web | demo | dump | test-notify | matches`."""
 
 from __future__ import annotations
 
@@ -125,6 +125,30 @@ def cmd_property(args: argparse.Namespace) -> None:
         print(format_history(history, settings))
 
 
+def cmd_web(args: argparse.Namespace) -> None:
+    """Interfața web. Implicit doar pe localhost; în Docker ascultă pe 0.0.0.0, publicat doar pe 127.0.0.1."""
+    import uvicorn
+
+    from .web import create_app
+
+    settings = load_settings()
+    sessions = _setup(settings)
+    uvicorn.run(create_app(settings, sessions), host=args.host, port=args.port, log_level="warning")
+
+
+def cmd_demo(args: argparse.Namespace) -> None:
+    """Date sintetice pentru interfață, într-un DATA_DIR separat (de exemplu data/demo)."""
+    from .demo import create_demo
+
+    settings = load_settings()
+    _setup(settings)
+    try:
+        count = create_demo(settings, args.apartments)
+    except RuntimeError as exc:
+        sys.exit(str(exc))
+    print(f"{count} anunțuri demo în {settings.database_url}")
+
+
 def cmd_dump(args: argparse.Namespace) -> None:
     """Descarcă o pagină, o salvează în data/debug și arată ce extrage adapterul din ea."""
     settings = load_settings()
@@ -217,6 +241,15 @@ def main(argv: list[str] | None = None) -> None:
     prop = sub.add_parser("property", help="istoricul unui apartament")
     prop.add_argument("reference", help="id-ul apartamentului sau URL-ul unui anunț")
     prop.set_defaults(func=cmd_property)
+
+    web = sub.add_parser("web", help="interfața web (doar citire)")
+    web.add_argument("--host", default="127.0.0.1")
+    web.add_argument("--port", type=int, default=8080)
+    web.set_defaults(func=cmd_web)
+
+    demo = sub.add_parser("demo", help="umple o bază de date goală cu date sintetice")
+    demo.add_argument("--apartments", type=int, default=8)
+    demo.set_defaults(func=cmd_demo)
 
     dump = sub.add_parser("dump", help="salvează o pagină și arată ce extrage adapterul")
     dump.add_argument("url")

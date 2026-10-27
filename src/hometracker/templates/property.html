@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set first = history.first %}
+{% set range = history.price_range() %}
+{% block title %}Apartamentul {{ history.property_id }} · home-tracker{% endblock %}
+{% block header %}
+  <span class="muted">Apartamentul {{ history.property_id }}</span>
+{% endblock %}
+{% block content %}
+<section>
+  <h2>{{ first.title }}</h2>
+  <div class="price">{{ price(range[0]) if range else price(None) }}{% if range and range[1] != range[0] %} – {{ price(range[1]) }}{% endif %}</div>
+  <div>{{ floor(first.floor) }}{% if first.area_m2 %} · {{ area(first.area_m2) }}{% endif %}{% if first.rooms %} · {{ first.rooms }} cam.{% endif %}</div>
+  <p class="small muted">
+    Pe piață de {{ plural(history.days_on_market(now), "zi", "zile") }}, din {{ day(first.first_seen) }}.
+    Prima apariție: {{ platform(first.platform) }}, {{ publisher(first) }}.
+    {{ plural(history.listings|length, "anunț", "anunțuri") }}, {{ history.active|length }} active, {{ plural(history.republications|length, "republicare", "republicări") }}.
+  </p>
+  {% if not history.active %}<span class="tag bad">nu mai e activ pe nicio platformă</span>{% endif %}
+</section>
+
+{% if chart %}
+<section>
+  <h2>Istoricul prețului</h2>
+  {{ chart }}
+</section>
+{% endif %}
+
+<section>
+  <h2>Anunțuri</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>#</th><th>Platformă</th><th>Publicator</th><th>Preț</th><th>Văzut</th><th>Stare</th></tr></thead>
+    <tbody>
+    {% for listing in history.listings %}
+      <tr>
+        <td>{{ listing.id }}</td>
+        <td>{% set link = safe_url(listing.url) %}{% if link %}<a href="{{ link }}" rel="noopener noreferrer" target="_blank">{{ platform(listing.platform) }}</a>{% else %}{{ platform(listing.platform) }}{% endif %}</td>
+        <td>{{ publisher(listing) }}</td>
+        <td class="nowrap">{{ price(listing.price_eur) }}</td>
+        <td class="small"><span class="nowrap">{{ day(listing.first_seen) }}</span> – <span class="nowrap">{{ day(listing.last_seen) }}</span></td>
+        <td class="small">
+          {% if listing.active %}<span class="tag good">activ</span>{% else %}<span class="tag bad">dispărut {{ day(listing.removed_at) }}</span>{% endif %}
+          {% if listing.republished_from_id %}<span class="tag warn">republicare a #{{ listing.republished_from_id }}</span>{% endif %}
+          {% set label = match_label(listing) %}{% if label %}<div class="muted">{{ label }}</div>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+
+{% if history.prices %}
+<section>
+  <h2>Prețuri în timp</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Data</th><th>Preț</th><th>Anunț</th></tr></thead>
+    <tbody>
+    {% for point in history.prices %}
+      <tr><td class="nowrap">{{ day(point.seen_at) }}</td><td class="nowrap">{{ price(point.price_eur) }}</td><td>{{ platform(point.listing.platform) }} #{{ point.listing.id }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</section>
+{% endif %}
+
+{% if photos %}
+<section>
+  <h2>Poze ({{ photos|length }})</h2>
+  <div class="gallery">
+    {% for photo in photos %}<img src="/photo/{{ photo.id }}" alt="" loading="lazy">{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% if first.description %}
+<section>
+  <h2>Descriere (prima apariție)</h2>
+  <p class="small">{{ first.description|truncate(1500) }}</p>
+</section>
+{% endif %}
+{% endblock %}

@@ -34,6 +34,25 @@ services:
       - ./data:/data
       - ./profiles:/app/profiles:ro
 
+  web:
+    build: .
+    restart: unless-stopped
+    command: ["hometracker", "web", "--host", "0.0.0.0", "--port", "8080"]
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://hometracker:${POSTGRES_PASSWORD}@db:5432/hometracker
+      DATA_DIR: /data
+      PROFILES_DIR: /app/profiles
+    volumes:
+      - ./data:/data:ro
+      - ./profiles:/app/profiles:ro
+    # Doar pe localhost: din exterior doar prin tunel, cu Cloudflare Access în față (ADR 0004).
+    ports:
+      - "127.0.0.1:${WEB_LOCAL_PORT:-8080}:8080"
+
   ntfy:
     image: binwiederhier/ntfy:latest
     restart: unless-stopped

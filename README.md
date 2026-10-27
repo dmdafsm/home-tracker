@@ -90,8 +90,22 @@ Dacă `cloudflared` rulează la rândul lui într-un container Docker, foloseșt
 `http://host.docker.internal:8090` în loc de `localhost`.
 
 Nu pune hostname-ul ntfy în spatele Cloudflare Access: aplicația ntfy nu poate trece
-prin login-ul Access și se bazează pe autentificarea proprie a serverului. Interfața
-web (etapa 2) va primi un hostname separat, protejat cu Access.
+prin login-ul Access și se bazează pe autentificarea proprie a serverului.
+
+### Interfața web
+
+Containerul `web` servește feed-ul apartamentelor potrivite și pagina fiecărui apartament
+pe `127.0.0.1:8080` (portul din `WEB_LOCAL_PORT`): http://localhost:8080. Interfața nu are
+login propriu, deci din exterior se deschide doar printr-un hostname separat al tunelului,
+**cu Cloudflare Access în față**, restricționat la contul tău:
+
+```yaml
+  - hostname: tracker.example.com
+    service: http://localhost:8080
+```
+
+Pentru lucrul la interfață fără date reale: `DATA_DIR=data/demo uv run hometracker demo`,
+apoi `DATA_DIR=data/demo uv run hometracker web --port 8081`.
 
 ## Ajustarea căutărilor
 
