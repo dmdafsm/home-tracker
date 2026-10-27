@@ -138,6 +138,7 @@ def test_merge_pages(web):
     assert "posibil același cu 2" in client.get("/").text
     page = client.get(f"/property/{ids['a']}").text
     assert "Posibil același apartament" in page and f'action="/property/{ids["a"]}/merge/{ids["b"]}"' in page
+    assert '<div class="thumbs"><a href="/property/' in page and 'alt="Apartamentul' in page
     url = f"/property/{ids['b']}/merge/{ids['a']}"
     assert client.post(url).status_code == 403
     assert client.post(url, headers={"origin": "https://evil.test"}).status_code == 403

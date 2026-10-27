@@ -160,30 +160,40 @@
     .trust { font-weight: 500; }
     .trust.high { color: var(--success); } .trust.mid { color: var(--warning); } .trust.low { color: var(--error); }
 
-    /* Carusel fără JavaScript: scroll-snap; butoane și puncte native unde browserul are ::scroll-button */
-    .carousel { position: relative; display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
-                overscroll-behavior-x: contain; scrollbar-width: none; background: var(--surface-container-highest);
-                aspect-ratio: 4 / 3; anchor-name: --carousel; scroll-marker-group: after; }
-    .carousel::-webkit-scrollbar { display: none; }
-    .carousel > .slide { flex: 0 0 100%; scroll-snap-align: center; position: relative; }
-    .carousel > .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    /* Carusel fără JavaScript (vezi _carousel.html): radio + săgeți cu mouse/tastatură, swipe pe ecrane tactile */
+    .carousel { position: relative; overflow: hidden; background: var(--surface-container-highest); aspect-ratio: 4 / 3; }
+    .carousel > input { position: absolute; top: 50%; left: 50%; margin: 0; opacity: 0; width: 1px; height: 1px; pointer-events: none; }
+    .carousel:has(> input:focus-visible) { outline: 2px solid var(--primary); outline-offset: -2px; }
+    .carousel .track { display: flex; height: 100%; transition: translate 0.25s ease; }
+    .carousel .slide { flex: 0 0 100%; height: 100%; position: relative; }
+    .carousel .slide > a, .carousel .slide img { display: block; width: 100%; height: 100%; }
+    .carousel .slide img { object-fit: cover; }
+    .carousel .slide.none { display: grid; place-items: center; align-content: center; gap: 4px; color: var(--on-surface-variant); }
+    {% for n in range(2, 41) %}.carousel:has(> input:nth-of-type({{ n }}):checked) > .track { translate: -{{ (n - 1) * 100 }}% 0; }
+    {% endfor %}
+    .carousel .nav { position: absolute; top: 50%; translate: 0 -50%; width: 40px; height: 40px; border-radius: 20px;
+                     display: grid; place-items: center; cursor: pointer; background: rgb(255 255 255 / 0.9);
+                     color: #191c20; box-shadow: var(--shadow-1); opacity: 0; transition: opacity 0.15s; }
+    .carousel .nav .icon { font-size: 24px; vertical-align: 0; }
+    .carousel .nav.prev { left: 8px; } .carousel .nav.next { right: 8px; }
+    .carousel:hover .nav, .carousel:has(> input:focus-visible) .nav { opacity: 1; }
+    .carousel .nav:hover { background: #fff; }
     .carousel .count { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 8px;
-                       background: rgb(0 0 0 / 0.55); color: #fff; font-size: 12px; font-weight: 500; }
-    .carousel .none { width: 100%; display: grid; place-items: center; gap: 4px; color: var(--on-surface-variant); align-content: center; }
-    .carousel::scroll-button(*) { font-family: "Material Symbols Outlined"; font-size: 24px; border: 0; width: 40px; height: 40px;
-                                  border-radius: 20px; background: rgb(255 255 255 / 0.85); color: #191c20; cursor: pointer;
-                                  position: absolute; position-anchor: --carousel; top: anchor(center); translate: 0 -50%; }
-    .carousel::scroll-button(*):disabled { opacity: 0; }
-    .carousel::scroll-button(left) { content: "chevron_left"; left: calc(anchor(left) + 8px); }
-    .carousel::scroll-button(right) { content: "chevron_right"; right: calc(anchor(right) + 8px); }
-    .carousel > .slide::scroll-marker { content: ""; width: 6px; height: 6px; border-radius: 3px; background: rgb(255 255 255 / 0.6); }
-    .carousel > .slide::scroll-marker:target-current { background: #fff; width: 16px; }
-    .carousel::scroll-marker-group { position: absolute; position-anchor: --carousel; bottom: calc(anchor(bottom) + 10px);
-                                     left: anchor(center); translate: -50% 0; display: flex; gap: 4px; }
-    @supports selector(::scroll-marker) { .carousel .count { display: none; } }
-    .carousel > .slide { height: 100%; }
+                       background: rgb(0 0 0 / 0.55); color: #fff; font-size: 12px; font-weight: 500; pointer-events: none; }
+    /* Ecrane tactile: banda se derulează cu degetul, fără săgeți (radiourile nu mai mută banda). */
+    @media (hover: none) and (pointer: coarse) {
+      .carousel .track { overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+                         scrollbar-width: none; translate: none !important; }
+      .carousel .track::-webkit-scrollbar { display: none; }
+      .carousel .slide { scroll-snap-align: center; }
+      .carousel .nav { display: none; }
+    }
     .carousel.large { aspect-ratio: auto; height: min(60vh, 75vw, 540px); border-radius: 12px; margin-bottom: 16px; background: #000; }
-    .carousel.large > .slide img { object-fit: contain; }
+    .carousel.large .slide img { object-fit: contain; }
+    /* Poze mici, de exemplu la „posibil același apartament” */
+    .thumbs { display: flex; gap: 4px; margin: 8px 0; overflow-x: auto; scrollbar-width: thin; }
+    .thumbs a { flex: 0 0 auto; }
+    .thumbs img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; display: block; background: var(--surface-container-highest); }
 
     /* Graficul prețului */
     .chart { width: 100%; height: auto; }
