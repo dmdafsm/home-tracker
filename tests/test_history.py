@@ -24,7 +24,9 @@ def test_match_reason_is_recorded(setup):
     run()
     found = rows(sessions)
     assert (found["s1"].match_reason, found["s1"].shared_photos) == ("new", 0)
-    assert (found["o1"].match_reason, found["o1"].shared_photos) == ("photos", 2)
+    assert (found["o1"].match_reason, found["o1"].shared_photos) == ("score", 2)
+    assert found["o1"].match_signals == "photos:2,area,floor"
+    assert found["o1"].match_score == 1.0 and found["o1"].matched_listing_id == found["s1"].id
     assert found["o1"].republished_from_id is None  # altă platformă
 
 
@@ -82,7 +84,7 @@ def test_history_timeline_prices_and_days_on_market(setup):
     assert "Pe piață de 12 zile, din 15.10.2026 (prima apariție: Storia, proprietar (Proprietar Exemplu))" in text
     assert "2 anunțuri, 2 active, 0 republicări" in text
     assert "Preț: 145.000 € – 149.000 €" in text
-    assert "legat prin 2 poze comune" in text
+    assert "legat cu anunțul 1 (scor 1.00: 2 poze comune, aceeași suprafață, același etaj)" in text
 
 
 def test_days_on_market_stop_when_every_listing_is_gone(setup):
