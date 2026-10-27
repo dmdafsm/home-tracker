@@ -26,6 +26,11 @@ def utcnow() -> datetime:
     return datetime.now(UTC)
 
 
+def as_utc(value: datetime) -> datetime:
+    """SQLite întoarce datele fără fus orar; în baza de date sunt mereu UTC."""
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -80,6 +85,12 @@ class Listing(Base):
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
 
     property_id: Mapped[int | None] = mapped_column(ForeignKey("property.id"), index=True)
+    # De ce a fost legat de apartament: "new" (apartament nou), "photos" (poze comune) sau
+    # "photo+attributes" (o poză comună, aceeași suprafață și același etaj).
+    match_reason: Mapped[str | None] = mapped_column(String(32))
+    shared_photos: Mapped[int | None] = mapped_column(Integer)
+    # Anunțul anterior al aceluiași publicator, pe aceeași platformă, pentru același apartament.
+    republished_from_id: Mapped[int | None] = mapped_column(Integer, index=True)
     property: Mapped[Property | None] = relationship(back_populates="listings")
     photos: Mapped[list[Photo]] = relationship(back_populates="listing", cascade="all, delete-orphan")
     snapshots: Mapped[list[ListingSnapshot]] = relationship(back_populates="listing", cascade="all, delete-orphan")
