@@ -4,17 +4,17 @@ Oct 27, 2026
 
 ## Scop și criterii
 
-Tool-ul adună anunțurile de apartamente de pe toate platformele românești într-un singur loc. Grupează anunțurile care descriu același apartament și dă fiecăruia un scor de încredere. Te anunță când apare ceva care se potrivește unui profil de căutare. Rulează local, pe un calculator personal, în Docker.
+Tool-ul adună anunțurile de apartamente de pe toate platformele românești într-un singur loc. Grupează anunțurile care descriu același apartament și dă fiecăruia un scor de încredere. Le arată, ordonate după profilurile de căutare, într-o interfață web locală. Rulează local, pe un calculator personal, în Docker.
 
-Primul profil, pentru apartamentul mamei:
+Un profil de căutare are criterii de felul acesta (valorile sunt cele din `profiles/example.yaml`, inventate; profilurile reale rămân locale):
 
 | Criteriu | Valoare | Tip |
 | --- | --- | --- |
-| Oraș / cartier | Cluj-Napoca, Gheorgheni | obligatoriu |
-| Preț | 130.000–165.000 € (țintă \~150.000 €) | obligatoriu |
-| Etaj | parter (simplu sau înalt) sau etajul 1 | obligatoriu |
+| Oraș / cartier | Cluj-Napoca, Mărăști | obligatoriu |
+| Preț | 100.000–140.000 € | obligatoriu |
+| Etaj | etajele 1–4 | obligatoriu |
+| Suprafață | cel puțin 45 m² | obligatoriu |
 | Balcon | da | preferință (crește scorul) |
-| Orizont | următoarele 6 luni | — |
 
 Profilurile sunt fișiere de configurare (YAML), nu cod. Fiecare are filtre dure, care exclud anunțul, și preferințe ponderate, care îl ordonează. Un profil nou pentru altcineva înseamnă doar un fișier nou.
 
@@ -163,7 +163,7 @@ Ordinea e gândită așa încât tool-ul să-ți fie util pentru căutarea mamei
 
 1. **MVP: colectare**, ținta fiind primele 1–2 weekenduri.
    - Docker compose cu `db` și `worker`.
-   - Adaptere pentru Storia, OLX și Imobiliare.ro, plus profilul Gheorgheni.
+   - Adaptere pentru Storia, OLX și Imobiliare.ro, plus primul profil de căutare.
    - Deduplicare simplă: aceeași platformă și id, apoi pHash pe poze.
 2. **Clustere și istoric**
    - Deduplicare completă (poze, text, atribute, telefon), istoricul prețurilor, detectarea republicărilor.
