@@ -190,7 +190,8 @@ def estimate(
         groups = [[item for item in exact if abs(item.low - anchor.low) <= AGREEMENT_YEARS] for anchor in exact]
         best = max(groups, key=len)
         low, high = min(item.low for item in best), max(item.high for item in best)
-        sources = {item.detail.split(":")[0] for item in best}
+        # Agențiile copiază textul proprietarului: aceeași frază în mai multe anunțuri e o singură sursă.
+        sources = {item.detail.split(": ", 1)[1] if item.source == "text" else item.detail for item in best}
         confidence = "medie" if len(sources) >= 2 else "mică"
         conflicts = [item for item in from_listings if item not in best]
         support = [item for item in typology if item.low <= low and item.high >= high]

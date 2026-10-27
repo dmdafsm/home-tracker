@@ -65,6 +65,13 @@ def test_two_agreeing_listings_give_medium_confidence():
     assert result.summary == "1978–1979, din 2 anunțuri"
 
 
+def test_copied_text_is_not_an_independent_confirmation():
+    copied = "Bloc din 1978, anvelopat"
+    result = estimate([row(1, description=copied), row(2, description=copied)])
+    assert (result.interval, result.confidence) == ("1978", "mică")
+    assert estimate([row(1, description=copied), row(2, extra={"build_year": "1978"})]).confidence == "medie"
+
+
 def test_one_listing_is_low_confidence_and_disagreement_is_shown():
     result = estimate([row(1, extra={"build_year": "1978"}), row(2, description="construit in 1995")])
     assert result.confidence == "mică"
