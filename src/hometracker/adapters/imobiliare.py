@@ -82,8 +82,12 @@ class ImobiliareAdapter(Adapter):
         soup = BeautifulSoup(html, "lxml")
         blocks = json_ld(html)
         offer_block = next(
-            (b for b in blocks if b.get("@type") in ("Product", "Offer", "Apartment", "Residence",
-                                                       "SingleFamilyResidence", "RealEstateListing")),
+            (
+                b
+                for b in blocks
+                if b.get("@type")
+                in ("Product", "Offer", "Apartment", "Residence", "SingleFamilyResidence", "RealEstateListing")
+            ),
             {},
         )
         title = str(offer_block.get("name") or (soup.h1.get_text(" ", strip=True) if soup.h1 else ""))

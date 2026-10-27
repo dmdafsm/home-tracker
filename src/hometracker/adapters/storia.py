@@ -19,8 +19,19 @@ from .base import Adapter, dig, find_objects_with_key, next_data, parse_datetime
 
 BASE_URL = "https://www.storia.ro"
 
-_ROOM_WORDS = {"ONE": 1, "TWO": 2, "THREE": 3, "FOUR": 4, "FIVE": 5, "SIX": 6, "SEVEN": 7,
-               "EIGHT": 8, "NINE": 9, "TEN": 10, "MORE": 11}
+_ROOM_WORDS = {
+    "ONE": 1,
+    "TWO": 2,
+    "THREE": 3,
+    "FOUR": 4,
+    "FIVE": 5,
+    "SIX": 6,
+    "SEVEN": 7,
+    "EIGHT": 8,
+    "NINE": 9,
+    "TEN": 10,
+    "MORE": 11,
+}
 
 
 def _rooms(value: object) -> int | None:
@@ -103,7 +114,8 @@ class StoriaAdapter(Adapter):
                 price=float(price) if isinstance(price, (int, float)) else None,
                 currency=currency,
                 price_eur=to_eur(float(price), currency, self.settings.eur_ron)
-                if isinstance(price, (int, float)) else None,
+                if isinstance(price, (int, float))
+                else None,
                 area_m2=parse_area(item.get("areaInSquareMeters")),
                 rooms=_rooms(item.get("roomsNumber")),
                 floor=floor,
@@ -117,9 +129,7 @@ class StoriaAdapter(Adapter):
     def parse_detail(self, html: str, url: str) -> ListingData:
         data = next_data(html)
         ad = dig(data, "props", "pageProps", "ad", default={}) or {}
-        characteristics = {
-            c.get("key"): c for c in ad.get("characteristics", []) or [] if isinstance(c, dict)
-        }
+        characteristics = {c.get("key"): c for c in ad.get("characteristics", []) or [] if isinstance(c, dict)}
 
         def char(key: str) -> object:
             entry = characteristics.get(key) or {}
