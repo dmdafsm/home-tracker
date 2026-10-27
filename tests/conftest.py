@@ -12,7 +12,7 @@ from hometracker.pipeline import Pipeline
 
 @pytest.fixture
 def setup(tmp_path):
-    settings = Settings(database_url=f"sqlite:///{tmp_path / 'db.sqlite'}", data_dir=tmp_path)
+    settings = Settings(database_url=f"sqlite:///{tmp_path / 'db.sqlite'}", data_dir=tmp_path, osm_lookups_per_run=0)
     sessions = init_db(make_engine(settings.database_url))
     images = {f"https://img.test/{i}.jpg": picture(i) for i in range(1, 20)}
     catalog = {"storia": [], "olx": []}

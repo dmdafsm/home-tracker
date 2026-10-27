@@ -16,6 +16,15 @@ from .publishers import link_missing_publishers
 STREETS = ["Strada Exemplu", "Bulevardul Test", "Aleea Demo", "Strada Model"]
 
 
+# Textul despre bloc variază, ca estimarea anului construcției să aibă ce arăta.
+BLOCKS = [
+    "Bloc de cărămidă P+4, etaj 1 din 4",
+    "Bloc din 1978, anvelopat",
+    "Bloc din panouri prefabricate",
+    "An construcție: 1979, bloc de cărămidă",
+]
+
+
 def _picture(seed: int) -> bytes:
     rnd = random.Random(seed)
     image = Image.new("RGB", (480, 360), (230 + rnd.randint(0, 20), 228, 220))
@@ -55,8 +64,12 @@ def create_demo(settings: Settings, apartments: int = 8) -> int:
                     url=f"https://example.com/{platform}/demo-{number}-{index}",
                     title=f"Apartament 2 camere, {area} mp, {STREETS[number % len(STREETS)]} (demo)",
                     description=(
-                        "Anunț sintetic pentru dezvoltarea interfeței. Bloc de cărămidă, balcon, centrală proprie."
+                        "Anunț sintetic pentru dezvoltarea interfeței. "
+                        + BLOCKS[number % len(BLOCKS)]
+                        + ", balcon, centrală proprie."
                     ),
+                    # Câmpul „an construcție” doar pe Storia, ca pe platforma reală.
+                    extra={"build_year": str(1976 + number % 3)} if platform == "storia" and number % 4 == 1 else {},
                     location_text="Cluj-Napoca, Gheorgheni",
                     price=base_price + index * 2_000,
                     currency="EUR",

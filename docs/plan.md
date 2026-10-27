@@ -118,7 +118,7 @@ Nu există o sursă publică unică și gratuită cu anul fiecărui bloc. Tool-u
 | Imagini istorice (ortofoto, hărți vechi) | blocul există sau nu într-un anumit an | gratuit, manual | mare pentru interval |
 | Geoportalul Primăriei Cluj-Napoca / ANCPI | date cadastrale; extrasul CF poate conține anul | extras CF plătit | mare |
 
-Pentru apartamentul ales, extrasul CF de la ANCPI e oricum necesar înainte de cumpărare. Pentru anunțurile de pe piață, tool-ul folosește estimarea. Ce date publică exact geoportalul Primăriei trebuie verificat în etapa 4.
+Pentru apartamentul ales, extrasul CF de la ANCPI e oricum necesar înainte de cumpărare. Pentru anunțurile de pe piață, tool-ul folosește estimarea. Ce publică geoportalul Primăriei și ce conține extrasul CF: [surse-an-constructie.md](surse-an-constructie.md) (etapa 4).
 
 ## Notificări
 

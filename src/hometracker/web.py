@@ -1,11 +1,11 @@
-"""Interfața web (doar citire): feed-ul apartamentelor potrivite și pagina unui apartament."""
+"""Interfața web: feed-ul apartamentelor potrivite, pagina unui apartament, etichetele și editorul de profiluri."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import urlsplit
+from urllib.parse import parse_qs, urlsplit
 from zoneinfo import ZoneInfo
 
 from fastapi import FastAPI, HTTPException, Request
@@ -15,7 +15,9 @@ from markupsafe import Markup, escape
 from sqlalchemy import select
 from sqlalchemy.orm import sessionmaker
 
+from . import profile_editor
 from .authenticity import Assessment, Context, assess
+from .buildyear import YearEstimate, estimate_for
 from .config import Settings
 from .history import PropertyHistory, match_label, property_history, publisher_label
 from .labels import ACTIONS, apply_label, label_for, labels_for, split_listing
@@ -43,6 +45,7 @@ class FeedItem:
     alerted: bool
     assessment: Assessment
     label: PropertyLabel | None
+    year: YearEstimate | None
 
     @property
     def platforms(self) -> list[str]:
@@ -85,6 +88,7 @@ def feed(
                 property_id in alerted,
                 assess(history, context),
                 label,
+                estimate_for(session, history.listings),
             )
         )
     items.sort(key=lambda item: (-item.result.score, -as_utc(item.history.listings[-1].first_seen).timestamp()))
@@ -228,6 +232,7 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                     "chart": price_chart(history),
                     "assessment": assess(history, Context.build(session)),
                     "label": label_for(session, property_id),
+                    "year": estimate_for(session, history.listings),
                     "now": utcnow(),
                 },
             )
@@ -288,6 +293,73 @@ def create_app(settings: Settings, sessions: sessionmaker | None = None) -> Fast
                 "publisher.html",
                 {"stats": stats, "listings": listings, "taken": taken, "agent_threshold": DISGUISED_AGENT_PROPERTIES},
             )
+
+    async def form(request: Request) -> dict[str, str]:
+        # Formular urlencoded citit direct, fără python-multipart; profilurile sunt mici.
+        if not request.headers.get("content-type", "").startswith("application/x-www-form-urlencoded"):
+            raise HTTPException(415, "formular neașteptat")
+        body = await request.body()
+        if len(body) > 4 * profile_editor.MAX_BYTES:
+            raise HTTPException(413, "formular prea mare")
+        return {key: values[0] for key, values in parse_qs(body.decode(), keep_blank_values=True).items()}
+
+    def edit_page(request: Request, *, text: str, original, error=None, preview=None, status_code=200):
+        return TEMPLATES.TemplateResponse(
+            request,
+            "profile_edit.html",
+            {"text": text, "original": original, "error": error, "preview": preview},
+            status_code=status_code,
+        )
+
+    def preview_for(profile: Profile, original) -> dict:
+        with sessions() as session:
+            after = len(feed(session, profile))
+            before = len(feed(session, original.profile)) if original and original.profile else None
+        return {"profile": profile, "after": after, "before": before}
+
+    @app.get("/profiles", response_class=HTMLResponse)
+    def profiles_page(request: Request, saved: str | None = None):
+        files = profile_editor.read_files(settings.profiles_dir)
+        return TEMPLATES.TemplateResponse(request, "profiles.html", {"files": files, "saved": saved})
+
+    @app.get("/profiles/new", response_class=HTMLResponse)
+    def new_profile(request: Request, source: str | None = None):
+        original = profile_editor.find(settings.profiles_dir, source) if source else None
+        if source and original is None:
+            raise HTTPException(404, "profil inexistent")
+        text = profile_editor.copy_text(original, f"{original.name}-copie") if original else "name: profil-nou\n"
+        return edit_page(request, text=text, original=None)
+
+    @app.get("/profiles/{name}", response_class=HTMLResponse)
+    def edit_profile(request: Request, name: str):
+        original = profile_editor.find(settings.profiles_dir, name)
+        if original is None:
+            raise HTTPException(404, "profil inexistent")
+        return edit_page(request, text=original.text, original=original)
+
+    async def submit(request: Request, original):
+        require_same_origin(request)
+        fields = await form(request)
+        text = fields.get("text", "")
+        try:
+            if fields.get("action") == "save":
+                saved = profile_editor.save(settings.profiles_dir, text, original=original)
+                return RedirectResponse(f"/profiles?saved={saved.name}", status_code=303)
+            preview = preview_for(profile_editor.parse(text), original)
+        except profile_editor.ProfileError as exc:
+            return edit_page(request, text=text, original=original, error=str(exc), status_code=422)
+        return edit_page(request, text=text, original=original, preview=preview)
+
+    @app.post("/profiles/new", response_class=HTMLResponse)
+    async def create_profile(request: Request):
+        return await submit(request, None)
+
+    @app.post("/profiles/{name}", response_class=HTMLResponse)
+    async def update_profile(request: Request, name: str):
+        original = profile_editor.find(settings.profiles_dir, name)
+        if original is None:
+            raise HTTPException(404, "profil inexistent")
+        return await submit(request, original)
 
     @app.get("/photo/{photo_id}")
     def photo(photo_id: int):

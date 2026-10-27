@@ -41,6 +41,11 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
 - **Rezumatul zilnic** pleacă pe email la prima rulare de după ora `SUMMARY_HOUR` (implicit
   20:00): anunțurile noi care trec de filtre dar n-au atins pragul de alertă, cele dispărute
   (posibil vândute), republicările și intervalele în care nu s-a colectat nimic.
+- **Anul construcției** e un interval cu sursa lui: anul din OpenStreetMap pentru clădirea
+  de la coordonatele anunțului (cel mult `OSM_LOOKUPS_PER_RUN` interogări pe rulare, păstrate
+  local), altfel anii declarați în anunțuri (și ale altor apartamente din același bloc), apoi
+  tipologia blocului. Pentru apartamentul ales, anul se confirmă din documente; vezi
+  [docs/surse-an-constructie.md](docs/surse-an-constructie.md).
 - **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.
@@ -72,7 +77,9 @@ docker compose exec worker hometracker test-notify ntfy
 
 În aplicația ntfy de pe telefon: adaugă serverul din `NTFY_PUBLIC_URL`, autentifică-te
 cu utilizatorul creat mai sus și abonează-te la topicul din `NTFY_TOPIC` (implicit
-`apartamente`).
+`apartamente`). Un profil poate avea topicul și adresa de email proprii
+(`notify.ntfy_topic`, `notify.email_to`), de exemplu pentru căutarea altcuiva; verifică-le cu
+`hometracker test-notify --profile <nume>`.
 
 ### Acces din exterior (Cloudflare Tunnel)
 
@@ -116,6 +123,13 @@ sub mediana apartamentelor asemănătoare, un „proprietar” cu telefonul la m
 dintr-un anunț dispărut, republicări luni de zile la același preț, detalii lipsă. Scorul nu
 dovedește nimic; arată ce merită verificat la telefon. În profil, `notify.min_authenticity`
 poate opri alertele instant sub un prag.
+
+Pagina **Profiluri** editează profilurile (fișierele din `profiles/`) ca text YAML, cu
+comentariile păstrate: **Verifică** validează și arată câte apartamente deja grupate ar trece de
+filtre, **Salvează** scrie fișierul (versiunea veche rămâne în `profiles/.history/`). Un profil
+nou pornește dintr-o copie a unuia existent. Numele nu se schimbă la editare, pentru că alertele
+trimise sunt ținute pe nume. Worker-ul citește profilurile la fiecare rulare. Profilurile noi nu
+intră în git (pot avea adrese de email); în repo rămâne doar exemplul.
 
 Pagina **Publicatori** arată, pentru fiecare agenție sau proprietar, câte anunțuri active are, câte
 apartamente, ce procent a preluat de la alții (apartamentul apăruse întâi la alt publicator) și

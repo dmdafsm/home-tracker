@@ -14,6 +14,7 @@ from urllib.parse import urlparse
 from sqlalchemy import select
 
 from .adapters import ADAPTERS
+from .buildyear import estimate_for
 from .config import Settings, load_settings
 from .history import find_property_id, format_history, property_history
 from .http import PoliteClient
@@ -128,7 +129,7 @@ def cmd_property(args: argparse.Namespace) -> None:
         history = property_history(session, property_id) if property_id is not None else None
         if history is None:
             sys.exit(f"nu am găsit apartamentul {args.reference}")
-        print(format_history(history, settings))
+        print(format_history(history, settings, year=estimate_for(session, history.listings)))
 
 
 def cmd_web(args: argparse.Namespace) -> None:
@@ -203,9 +204,16 @@ def cmd_test_notify(args: argparse.Namespace) -> None:
     settings = load_settings()
     logging.basicConfig(level=logging.INFO)
     channels = args.channels or ["ntfy", "email"]
+    destinations = {}
+    if args.profile:
+        profile = next((p for p in load_profiles(settings.profiles_dir) if p.name == args.profile), None)
+        if profile is None:
+            sys.exit(f"profil necunoscut sau inactiv: {args.profile}")
+        destinations = profile.notify.destinations()
     delivered = Notifier(settings).send(
         Message(title="home-tracker: test", body="Notificările funcționează.", tags=["white_check_mark"]),
         channels,
+        **destinations,
     )
     print("livrat pe: " + (", ".join(delivered) or "niciun canal"))
 
@@ -263,6 +271,7 @@ def main(argv: list[str] | None = None) -> None:
 
     test = sub.add_parser("test-notify", help="trimite o notificare de test")
     test.add_argument("channels", nargs="*", choices=["ntfy", "email"])
+    test.add_argument("--profile", help="trimite la destinațiile profilului (notify.ntfy_topic, notify.email_to)")
     test.set_defaults(func=cmd_test_notify)
 
     matches = sub.add_parser("matches", help="ultimele alerte trimise")

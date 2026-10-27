@@ -16,7 +16,7 @@
 - Everything runs in Docker Compose on a single machine that is not always on ([ADR 0001](docs/engineering/decisions/0001-docker-compose.md)). Containers publish ports only on the host's `127.0.0.1`; outside access goes through a tunnel configured outside this repository (for example Cloudflare Tunnel), with an identity check such as Cloudflare Access in front of the web interface and ntfy's own token auth for ntfy.
 - Python 3.12 with `uv`, a single package `hometracker` under `src/`, an argparse CLI, SQLAlchemy on PostgreSQL with a SQLite fallback for tests and local runs ([ADR 0002](docs/engineering/decisions/0002-sqlalchemy-postgres.md)), ntfy and SMTP for notifications.
 - Data enters only through the adapters run by the `worker` (`hometracker loop` / `run`). Matching, deduplication, notifications and the future web interface read the database and never call a platform themselves.
-- Profiles are YAML files in `profiles/`, not code. A new search is a new file; a new platform is a new adapter module.
+- Profiles are YAML files in `profiles/`, not code, edited by hand or in the web profile editor. A new search is a new file (kept out of git, since it can hold personal notification destinations); a new platform is a new adapter module.
 - Keep things simple: plain modules, small dataclasses, no service layer or new infrastructure without a short [decision record](docs/engineering/decisions/template.md).
 
 ## Working agreements

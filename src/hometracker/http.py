@@ -55,14 +55,22 @@ class PoliteClient:
                 self._sleep(remaining)
         self._last_request[host] = time.monotonic()
 
-    def get(self, url: str, *, archive: bool = True, accept_json: bool = False) -> httpx.Response:
+    def get(
+        self,
+        url: str,
+        *,
+        archive: bool = True,
+        accept_json: bool = False,
+        headers: dict[str, str] | None = None,
+        timeout: float | None = None,
+    ) -> httpx.Response:
         host = urlparse(url).netloc
-        headers = {"Accept": "application/json"} if accept_json else None
+        headers = {**({"Accept": "application/json"} if accept_json else {}), **(headers or {})} or None
         backoff = 30.0
         for attempt in range(3):
             self._wait_turn(host)
             try:
-                response = self._client.get(url, headers=headers)
+                response = self._client.get(url, headers=headers, **({"timeout": timeout} if timeout else {}))
             except httpx.TransportError as exc:
                 log.warning("eroare de rețea la %s: %s", url, exc)
                 if attempt == 2:

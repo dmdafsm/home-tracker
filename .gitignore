@@ -1,3 +1,10 @@
+# Profilurile proprii (pot avea topic ntfy și email); în repo rămâne doar exemplul.
+profiles/*.yaml
+profiles/*.yml
+!profiles/gheorgheni-mama.yaml
+profiles/.history/
+profiles/.*.tmp
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

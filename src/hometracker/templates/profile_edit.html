@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ original.name if original else "Profil nou" }} · home-tracker{% endblock %}
+{% block content %}
+<section>
+  <h2>{% if original %}Profilul {{ original.name }}{% else %}Profil nou{% endif %}</h2>
+  <p class="small muted">
+    Filtre, preferințe, notificări (<code>notify.channels</code>, <code>notify.ntfy_topic</code>,
+    <code>notify.email_to</code>) și căutări pe platforme; comentariile din fișier se păstrează.
+    {% if original %}Numele nu se schimbă la editare, pentru că alertele trimise sunt ținute pe nume.{% endif %}
+    „Verifică” validează profilul și numără, fără să salveze, câte dintre apartamentele deja grupate ar trece de filtre; anunțurile care n-au trecut de niciun profil nu sunt grupate, deci un filtru mai larg arată tot ce va găsi worker-ul abia după rulările următoare.
+  </p>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  {% if preview %}
+  <p class="notice">
+    Profil valid: {{ plural(preview.after, "apartament trece", "apartamente trec") }} de filtre acum
+    {%- if preview.before is not none %} (față de {{ preview.before }} cu versiunea salvată){% endif %}.
+    {% if not preview.profile.active %}Profilul e inactiv: worker-ul nu îl rulează.{% endif %}
+  </p>
+  {% endif %}
+  <form method="post" action="{{ '/profiles/' ~ original.name if original else '/profiles/new' }}">
+    <textarea class="yaml" name="text" spellcheck="false" aria-label="Profil YAML">{{ text }}</textarea>
+    <div class="actions">
+      <button type="submit" name="action" value="preview">Verifică</button>
+      <button type="submit" name="action" value="save" class="on">Salvează</button>
+      <a class="small" href="/profiles">Renunță</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

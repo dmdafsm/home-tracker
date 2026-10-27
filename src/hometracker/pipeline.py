@@ -19,6 +19,8 @@ from .http import BlockedError, PoliteClient
 from .labels import label_for
 from .models import Alert, Listing, ListingSnapshot, Photo, RunLog, utcnow
 from .notify import PLATFORM_NAMES, Message, Notifier, floor_label, format_price
+from .osm import lookup as osm_lookup
+from .osm import pending_locations
 from .parsing import phone_hash
 from .photos import image_hashes, save_image
 from .profiles import MatchResult, Profile, match
@@ -93,7 +95,26 @@ class Pipeline:
                     continue
                 self._run_source(profile, adapter_cls(self.client, self.settings), source.url, pages, stats)
         self._recheck(profiles, stats)
+        self._osm_lookups(stats)
         return stats
+
+    def _osm_lookups(self, stats: RunStats) -> None:
+        """Anul construcției din OpenStreetMap pentru câteva locații noi (ADR 0005)."""
+        with self.sessions() as session:
+            for latitude, longitude in pending_locations(session, self.settings.osm_lookups_per_run):
+                try:
+                    row = osm_lookup(session, self.client, self.settings.overpass_url, latitude, longitude)
+                    session.commit()
+                    log.info("OpenStreetMap %s,%s: %s", latitude, longitude, row.start_date or "fără an")
+                except BlockedError as exc:
+                    session.rollback()
+                    log.warning("Overpass refuză cererile, reîncerc la rularea următoare: %s", exc)
+                    return
+                except Exception as exc:  # o eroare de rețea nu oprește rularea
+                    session.rollback()
+                    log.warning("interogarea OpenStreetMap a eșuat (%s,%s): %s", latitude, longitude, exc)
+                    stats.errors.append(f"osm: {exc}")
+                    return
 
     def _run_source(self, profile: Profile, adapter: Adapter, url: str, pages: int, stats: RunStats) -> None:
         # Valorile implicite ale coloanelor se aplică abia la salvare, deci contoarele pornesc explicit de la 0.
@@ -473,6 +494,7 @@ class Pipeline:
                 priority=4 if kind == "new" else 3,
             ),
             profile.notify.channels,
+            **profile.notify.destinations(),
         )
         session.add(
             Alert(
@@ -500,6 +522,7 @@ class Pipeline:
         self.notifier.send(
             Message(title="home-tracker: problemă la colectare", body=text, tags=["warning"], priority=2),
             profile.notify.channels,
+            **profile.notify.destinations(),
         )
 
 
