@@ -222,3 +222,10 @@ __marimo__/
 # home-tracker
 .env
 data/
+.DS_Store
+# local research, task notes and real pages saved for debugging; never committed
+.research/
+# generated local output (reviews, reports)
+.artifacts/
+.env.*
+!.env.example

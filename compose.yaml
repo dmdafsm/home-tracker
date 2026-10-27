@@ -48,7 +48,7 @@ services:
       NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
     volumes:
       - ntfydata:/var/lib/ntfy
-    # Doar pe localhost: accesul din exterior trece prin tunelul Cloudflare existent.
+    # Doar pe localhost: accesul din exterior trece printr-un tunel (de exemplu Cloudflare).
     ports:
       - "127.0.0.1:${NTFY_LOCAL_PORT:-8090}:80"
 

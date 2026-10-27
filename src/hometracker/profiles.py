@@ -21,9 +21,7 @@ class Range(BaseModel):
             return True
         if self.min is not None and value < self.min:
             return False
-        if self.max is not None and value > self.max:
-            return False
-        return True
+        return self.max is None or value <= self.max
 
 
 class Filters(BaseModel):

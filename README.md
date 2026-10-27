@@ -6,8 +6,8 @@ aceleași poze. Când apare un apartament care se potrivește unui profil de că
 trimite o notificare pe telefon prin [ntfy](https://ntfy.sh) și, opțional, pe email.
 
 Starea actuală e **etapa 1 (MVP)**: colectare, filtrare după profil, deduplicare după
-poze, alerte pentru apartamentele noi și pentru scăderile de preț. Planul complet se
-află în documentul de plan al proiectului.
+poze, alerte pentru apartamentele noi și pentru scăderile de preț. Planul complet e în
+[docs/plan.md](docs/plan.md), iar arhitectura actuală în [docs/architecture.md](docs/architecture.md).
 
 ## Cum funcționează
 
@@ -29,7 +29,7 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
   potrivesc, pentru că agențiile refolosesc poze cu fațada blocului.
 - **Alertele** se trimit o singură dată pe apartament și profil, oricâte platforme îl
   publică. O scădere de preț de peste 3% generează o alertă separată.
-- **Cu Mac-ul închis** nu se colectează nimic. La pornire și după o pauză mai lungă de
+- **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.
 - **Poze și HTML** se salvează în `data/`, local, doar pentru comparare și reprocesare.
@@ -37,7 +37,7 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
 
 ## Instalare
 
-Ai nevoie de Docker Desktop pe Mac.
+Ai nevoie de Docker (de exemplu Docker Desktop).
 
 ```sh
 git clone https://github.com/dmdafsm/home-tracker.git
@@ -58,15 +58,16 @@ docker compose up -d worker                        # repornește worker-ul cu to
 docker compose exec worker hometracker test-notify ntfy
 ```
 
-În aplicația ntfy de pe telefon: adaugă serverul `https://ntfy.example.com`, autentifică-te
+În aplicația ntfy de pe telefon: adaugă serverul din `NTFY_PUBLIC_URL`, autentifică-te
 cu utilizatorul creat mai sus și abonează-te la topicul din `NTFY_TOPIC` (implicit
 `apartamente`).
 
-### Tunelul Cloudflare
+### Acces din exterior (Cloudflare Tunnel)
 
-Tunelul există deja pe Mac. Proiectul nu îl configurează: expune doar serviciul HTTP
-al ntfy pe `127.0.0.1:8090` (portul din `NTFY_LOCAL_PORT`). Adaugă în configurarea
-tunelului o regulă de ingress, înaintea regulii finale `http_status:404`:
+Proiectul nu configurează accesul din exterior: expune doar serviciul HTTP al ntfy pe
+`127.0.0.1:8090` (portul din `NTFY_LOCAL_PORT`). Ca telefonul să ajungă la el, poți folosi
+un tunel Cloudflare. Adaugă în configurarea tunelului o regulă de ingress, înaintea regulii
+finale `http_status:404`, cu hostname-ul tău:
 
 ```yaml
   - hostname: ntfy.example.com
@@ -76,7 +77,7 @@ tunelului o regulă de ingress, înaintea regulii finale `http_status:404`:
 Dacă `cloudflared` rulează la rândul lui într-un container Docker, folosește
 `http://host.docker.internal:8090` în loc de `localhost`.
 
-Nu pune `ntfy.example.com` în spatele Cloudflare Access: aplicația ntfy nu poate trece
+Nu pune hostname-ul ntfy în spatele Cloudflare Access: aplicația ntfy nu poate trece
 prin login-ul Access și se bazează pe autentificarea proprie a serverului. Interfața
 web (etapa 2) va primi un hostname separat, protejat cu Access.
 
@@ -104,7 +105,9 @@ pe platformă). Pașii de urmat:
 
 1. Rulează `hometracker dump "<url-ul căutării>"`. Pagina se salvează în `data/debug/`,
    iar comanda arată ce a reușit adapterul să extragă.
-2. Pune pagina salvată în `tests/fixtures/` și scrie un test care o folosește.
+2. Scrie în `tests/fixtures/` o copie sintetică a paginii: aceeași structură, cu titluri,
+   prețuri, nume și telefoane inventate. Repository-ul e public, deci pagina reală rămâne
+   doar local, în `data/debug/`.
 3. Ajustează adapterul din `src/hometracker/adapters/` până trece testul.
 
 Adapterele nu ocolesc protecțiile site-urilor. Dacă un site cere o verificare (CAPTCHA),
@@ -112,11 +115,17 @@ rularea se oprește pentru platforma respectivă și reîncearcă la intervalul 
 
 ## Dezvoltare
 
+Ai nevoie de [uv](https://docs.astral.sh/uv/).
+
 ```sh
-python3 -m venv .venv && . .venv/bin/activate
-pip install -e '.[dev]'
-pytest
+uv sync                              # Python 3.12, dependențele și uneltele de dezvoltare
+python3 scripts/install_hooks.py     # o dată pe clonă: blochează commit-urile direct pe main
+uv run pytest
+python3 scripts/verify.py            # verificarea completă, ca în CI
 ```
+
+Regulile de lucru (branch-uri, teste, review, date personale) sunt în [AGENTS.md](AGENTS.md)
+și [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Fără `DATABASE_URL`, aplicația folosește SQLite în `data/hometracker.db`, util pentru
 rulări locale în afara Docker.
@@ -134,3 +143,5 @@ rulări locale în afara Docker.
 | `src/hometracker/cli.py` | comenzile `hometracker` |
 | `profiles/` | profilurile de căutare |
 | `tests/` | teste pe pagini sintetice și pe fluxul complet (SQLite) |
+| `docs/` | planul, arhitectura, regulile de engineering și deciziile (ADR) |
+| `scripts/` | verificarea repository-ului, hook-urile git și `verify.py` |

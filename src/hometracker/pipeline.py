@@ -24,8 +24,22 @@ log = logging.getLogger(__name__)
 
 # Câmpurile copiate din ListingData în rândul din baza de date.
 _COPIED_FIELDS = (
-    "url", "title", "description", "location_text", "price", "currency", "price_eur", "area_m2",
-    "rooms", "floor", "balcony", "latitude", "longitude", "publisher_name", "publisher_type", "posted_at",
+    "url",
+    "title",
+    "description",
+    "location_text",
+    "price",
+    "currency",
+    "price_eur",
+    "area_m2",
+    "rooms",
+    "floor",
+    "balcony",
+    "latitude",
+    "longitude",
+    "publisher_name",
+    "publisher_type",
+    "posted_at",
 )
 WARNING_COOLDOWN = timedelta(hours=12)
 
@@ -92,10 +106,14 @@ class Pipeline:
             stats.new += run.new
             if run.error:
                 stats.errors.append(f"{adapter.name}: {run.error}")
-                self._warn(session, profile, adapter.name, f"{PLATFORM_NAMES.get(adapter.name, adapter.name)}: {run.error}")
+                self._warn(
+                    session, profile, adapter.name, f"{PLATFORM_NAMES.get(adapter.name, adapter.name)}: {run.error}"
+                )
             elif run.found == 0:
                 self._warn(
-                    session, profile, adapter.name,
+                    session,
+                    profile,
+                    adapter.name,
                     f"{PLATFORM_NAMES.get(adapter.name, adapter.name)} nu a întors niciun anunț. "
                     "Probabil s-a schimbat structura paginii sau URL-ul de căutare.",
                 )
@@ -200,9 +218,15 @@ class Pipeline:
         )
         if last_drop is not None and new_price >= last_drop:
             return
-        self._send(session, profile, listing, result, "price_drop",
-                   title=f"Preț scăzut cu {drop:.0f}% · {format_price(new_price)}",
-                   lead=f"Înainte: {format_price(old_price)}")
+        self._send(
+            session,
+            profile,
+            listing,
+            result,
+            "price_drop",
+            title=f"Preț scăzut cu {drop:.0f}% · {format_price(new_price)}",
+            lead=f"Înainte: {format_price(old_price)}",
+        )
         stats.alerts += 1
 
     def _download_photos(self, session: Session, listing: Listing, urls: list[str]) -> None:
@@ -213,8 +237,9 @@ class Pipeline:
                 hashes = image_hashes(data)
                 if hashes:
                     photo.phash, photo.dhash = hashes
-                    photo.path = str(save_image(self.settings.photos_dir, listing.platform, listing.external_id,
-                                                position, data))
+                    photo.path = str(
+                        save_image(self.settings.photos_dir, listing.platform, listing.external_id, position, data)
+                    )
             except Exception as exc:
                 log.debug("poză eșuată %s: %s", url, exc)
             session.add(photo)
@@ -224,11 +249,14 @@ class Pipeline:
 
     @staticmethod
     def _already_alerted(session: Session, profile: Profile, property_id: int, kind: str) -> bool:
-        return session.scalar(
-            select(func.count(Alert.id)).where(
-                Alert.profile == profile.name, Alert.property_id == property_id, Alert.kind == kind
+        return (
+            session.scalar(
+                select(func.count(Alert.id)).where(
+                    Alert.profile == profile.name, Alert.property_id == property_id, Alert.kind == kind
+                )
             )
-        ) > 0
+            > 0
+        )
 
     def _alert_new(self, session: Session, profile: Profile, listing: Listing, result: MatchResult) -> None:
         parts = [format_price(listing.price_eur), floor_label(listing.floor)]
@@ -238,52 +266,87 @@ class Pipeline:
             parts.append(f"{listing.rooms} cam.")
         self._send(session, profile, listing, result, "new", title="Apartament nou · " + " · ".join(parts))
 
-    def _send(self, session: Session, profile: Profile, listing: Listing, result: MatchResult, kind: str,
-              *, title: str, lead: str = "") -> None:
-        publisher = {"owner": "proprietar", "agency": "agenție"}.get(listing.publisher_type or "", "publicator necunoscut")
+    def _send(
+        self,
+        session: Session,
+        profile: Profile,
+        listing: Listing,
+        result: MatchResult,
+        kind: str,
+        *,
+        title: str,
+        lead: str = "",
+    ) -> None:
+        publisher = {"owner": "proprietar", "agency": "agenție"}.get(
+            listing.publisher_type or "", "publicator necunoscut"
+        )
         if listing.publisher_name:
             publisher += f" ({listing.publisher_name})"
         others = session.scalars(
             select(Listing).where(Listing.property_id == listing.property_id, Listing.id != listing.id)
         ).all()
-        lines = [line for line in (
-            lead,
-            listing.title,
-            f"{PLATFORM_NAMES.get(listing.platform, listing.platform)} · {publisher}",
-            f"Scor {result.score:.0f}: " + ", ".join(result.reasons) if result.reasons else f"Scor {result.score:.0f}",
-        ) if line]
+        lines = [
+            line
+            for line in (
+                lead,
+                listing.title,
+                f"{PLATFORM_NAMES.get(listing.platform, listing.platform)} · {publisher}",
+                f"Scor {result.score:.0f}: " + ", ".join(result.reasons)
+                if result.reasons
+                else f"Scor {result.score:.0f}",
+            )
+            if line
+        ]
         if others:
-            lines.append("Apare și pe: " + ", ".join(
-                f"{PLATFORM_NAMES.get(o.platform, o.platform)} {format_price(o.price_eur)}" for o in others
-            ))
+            lines.append(
+                "Apare și pe: "
+                + ", ".join(f"{PLATFORM_NAMES.get(o.platform, o.platform)} {format_price(o.price_eur)}" for o in others)
+            )
         first_photo = next((p.source_url for p in listing.photos if p.phash), None)
         self.notifier.send(
-            Message(title=title, body="\n".join(lines), url=listing.url, image_url=first_photo,
-                    tags=["house"] if kind == "new" else ["chart_with_downwards_trend"],
-                    priority=4 if kind == "new" else 3),
+            Message(
+                title=title,
+                body="\n".join(lines),
+                url=listing.url,
+                image_url=first_photo,
+                tags=["house"] if kind == "new" else ["chart_with_downwards_trend"],
+                priority=4 if kind == "new" else 3,
+            ),
             profile.notify.channels,
         )
-        session.add(Alert(profile=profile.name, property_id=listing.property_id, listing_id=listing.id,
-                          kind=kind, score=result.score, price_eur=listing.price_eur))
+        session.add(
+            Alert(
+                profile=profile.name,
+                property_id=listing.property_id,
+                listing_id=listing.id,
+                kind=kind,
+                score=result.score,
+                price_eur=listing.price_eur,
+            )
+        )
         session.flush()
 
     def _warn(self, session: Session, profile: Profile, platform: str, text: str) -> None:
         """Avertismente tehnice, cel mult unul la 12 ore pe platformă."""
         since = datetime.now(UTC) - WARNING_COOLDOWN
         recent = session.scalars(
-            select(RunLog).where(RunLog.platform == platform, RunLog.started_at >= since)
+            select(RunLog)
+            .where(RunLog.platform == platform, RunLog.started_at >= since)
             .order_by(RunLog.started_at.desc())
         ).all()
         problems = [r for r in recent if r.error or r.found == 0]
         if len(problems) > 1:  # rularea curentă e deja în listă; o problemă anterioară = am anunțat deja
             return
-        self.notifier.send(Message(title="home-tracker: problemă la colectare", body=text, tags=["warning"],
-                                   priority=2), profile.notify.channels)
+        self.notifier.send(
+            Message(title="home-tracker: problemă la colectare", body=text, tags=["warning"], priority=2),
+            profile.notify.channels,
+        )
 
 
 def _as_data(listing: Listing) -> ListingData:
-    data = ListingData(platform=listing.platform, external_id=listing.external_id, url=listing.url,
-                       is_detail=listing.detail_fetched)
+    data = ListingData(
+        platform=listing.platform, external_id=listing.external_id, url=listing.url, is_detail=listing.detail_fetched
+    )
     for name in _COPIED_FIELDS:
         setattr(data, name, getattr(listing, name))
     return data

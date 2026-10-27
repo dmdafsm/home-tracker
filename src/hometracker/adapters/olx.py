@@ -94,9 +94,7 @@ class OlxAdapter(Adapter):
             price, currency = parse_price(dig(ad, "price", "displayValue"))
         title = ad.get("title") or ""
         description = _description_text(ad.get("description"))
-        floor = parse_floor_value(_param_value(params.get("floor"))) or find_floor_in_text(
-            f"{title} {description}"
-        )
+        floor = parse_floor_value(_param_value(params.get("floor"))) or find_floor_in_text(f"{title} {description}")
         rooms_value = _param_value(params.get("rooms"))
         rooms_match = re.search(r"\d+", str(rooms_value or ""))
         location = ad.get("location") or {}
@@ -124,8 +122,9 @@ class OlxAdapter(Adapter):
             publisher_type="agency" if ad.get("isBusiness") else "owner",
             phone=find_phone_in_text(description),
             posted_at=parse_datetime(ad.get("createdTime")),
-            photo_urls=[_photo_url(p if isinstance(p, str) else str(p.get("link") or ""))
-                        for p in ad.get("photos") or [] if p],
+            photo_urls=[
+                _photo_url(p if isinstance(p, str) else str(p.get("link") or "")) for p in ad.get("photos") or [] if p
+            ],
             is_detail=is_detail,
             extra={"last_refresh": ad.get("lastRefreshTime")} if ad.get("lastRefreshTime") else {},
         )
