@@ -17,9 +17,8 @@ filters:
   price_eur: { min: 130000, max: 165000 }
   floors: [ground, raised_ground, 1]
   text_any: [gheorgheni]
-notify:
-  channels: [ntfy]
-  price_drop_scope: alerted
+preferences:
+  balcony: 25
 sources:
   storia:
     url: "https://storia.test"
@@ -43,8 +42,6 @@ def profiles(tmp_path):
         ("name: x\nfilters: { price_eur: { min: nu } }", "filters.price_eur.min"),
         ("name: x\nsources: { ebay: { url: 'https://ebay.test' } }", "platformă necunoscută ebay"),
         ("name: x\nsources: { storia: { url: 'javascript:alert(1)' } }", "https://"),
-        ("name: x\nnotify: { channels: [sms] }", "canal necunoscut sms"),
-        ("name: x\nnotify: { email_to: 'a@b.test\\nBcc: c@d.test' }", "email"),
     ],
 )
 def test_invalid_profiles_are_explained(text, message):
@@ -82,7 +79,7 @@ def test_invalid_file_is_listed_with_its_error(profiles):
 
 @pytest.fixture
 def web(setup, profiles, tmp_path):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [
         listing("storia", "s1", [1, 2, 3]),
         listing("storia", "s2", [7, 8, 9], area_m2=70, price_eur=168000),

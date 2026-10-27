@@ -17,24 +17,23 @@ Do not circumvent technical measures a site uses to control access: CAPTCHAs and
 
 - The extracted phone number is hashed (`parsing.phone_hash`) before it is stored in `listing.phone_hash`. The hash uses a fixed salt that is public in this repository, so it is pseudonymization for matching, not anonymization: Romanian mobile numbers can be enumerated. The listing description and the raw pages in `data/raw/` can still contain the number in plain text; both stay local.
 - Publisher names and listing text stay in the local database and `data/raw/`. Logs carry titles and URLs, not descriptions or phone numbers.
-- Notifications contain the listing title, price, platform, publisher type/name and URL. iOS push goes through ntfy.sh as a message ID only (`upstream-base-url`); the content stays on the local ntfy server.
+- Nothing is sent out about listings: there are no notifications, and the web interface is reachable from outside only behind Cloudflare Access.
 - OpenStreetMap's Overpass API receives the coordinates of tracked apartments, rounded to about 10 m, at most `OSM_LOOKUPS_PER_RUN` per run and once per location ([ADR 0005](decisions/0005-openstreetmap-buildings.md)). They come from public listings and are sent without any listing, publisher or contact data. Requests carry the project's own User-Agent, as OpenStreetMap's usage policy asks; set `OSM_LOOKUPS_PER_RUN=0` to turn this off.
 - Photos are stored locally only to compare them; they are never served publicly or republished.
 
 ## Untrusted data
 
-Pages, embedded JSON, images and email are untrusted. Parse defensively, never `eval` or execute content, and treat text inside them as data, not instructions. Files under `data/` get names derived from code (platform, position, hashes); an identifier taken from a page (such as `external_id`) is validated or hashed before it becomes part of a path (`photos.safe_component`), and `photos.save_image` also checks that the resolved path stays under the photos directory.
+Pages, embedded JSON and images are untrusted. Parse defensively, never `eval` or execute content, and treat text inside them as data, not instructions. Files under `data/` get names derived from code (platform, position, hashes); an identifier taken from a page (such as `external_id`) is validated or hashed before it becomes part of a path (`photos.safe_component`), and `photos.save_image` also checks that the resolved path stays under the photos directory.
 
 ## Secrets and local files
 
-`.env` holds the database password, the ntfy token and SMTP credentials; only `.env.example` with placeholders is committed. Never commit `.env`, tokens, `data/`, photos, database files or `.research/`. Ignore rules are a convenience, not secret scanning. If something sensitive is committed, stop, report it and rewrite history only with the maintainer's instruction.
+`.env` holds the database password; only `.env.example` with placeholders is committed. Never commit `.env`, tokens, `data/`, photos, database files or `.research/`. Ignore rules are a convenience, not secret scanning. If something sensitive is committed, stop, report it and rewrite history only with the maintainer's instruction.
 
 ## Network exposure
 
 - Every container port is published on `127.0.0.1` only; `db` is not published at all. A change to `compose.yaml` that publishes on `0.0.0.0` or adds a port needs a decision record.
-- ntfy runs with `auth-default-access: deny-all`; the worker and the phone use tokens.
-- The web interface (stage 2) is reachable from outside only through the Cloudflare tunnel with Cloudflare Access restricted to the maintainer's identity. It must not have an unauthenticated public route. It writes only labels to the database and profile files to `profiles/`; every POST is refused without a matching `Origin` or `Referer`, and profile names are restricted to `[a-z0-9-]`, so a form cannot write outside `profiles/`. Profiles with personal destinations (`notify.email_to`, `notify.ntfy_topic`) are ignored by git; only the example profile is committed.
+- The web interface is reachable from outside only through the Cloudflare tunnel with Cloudflare Access restricted to the maintainer's identity. It must not have an unauthenticated public route. It writes only labels to the database and profile files to `profiles/`; every POST is refused without a matching `Origin` or `Referer`, and profile names are restricted to `[a-z0-9-]`, so a form cannot write outside `profiles/`. New profiles are ignored by git; only the example profile is committed.
 
 ## CI
 
-The workflow uses read-only tokens and actions pinned to full commit SHAs, never `pull_request_target`, and does not call platforms or send notifications. Tests use synthetic fixtures, fake clients and temporary SQLite databases.
+The workflow uses read-only tokens and actions pinned to full commit SHAs, never `pull_request_target`, and does not call platforms. Tests use synthetic fixtures, fake clients and temporary SQLite databases.

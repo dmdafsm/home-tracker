@@ -9,7 +9,7 @@ from datetime import timedelta
 from PIL import Image, ImageDraw
 
 from .config import Settings
-from .models import Alert, Listing, ListingSnapshot, Photo, Property, init_db, make_engine, utcnow
+from .models import Listing, ListingSnapshot, Photo, Property, init_db, make_engine, utcnow
 from .photos import image_hashes, save_image
 from .publishers import link_missing_publishers
 
@@ -118,11 +118,6 @@ def create_demo(settings: Settings, apartments: int = 8) -> int:
                         )
                     )
                 created += 1
-            if number % 2:
-                first = session.query(Listing).filter_by(property_id=prop.id).order_by(Listing.id).first()
-                session.add(
-                    Alert(profile="gheorgheni-mama", property_id=prop.id, listing_id=first.id, kind="new", score=90)
-                )
         link_missing_publishers(session)
         session.commit()
     return created

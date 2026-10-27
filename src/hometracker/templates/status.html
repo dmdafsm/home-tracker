@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Stare · home-tracker{% endblock %}
+{% block content %}
+<section>
+  <h2>Starea colectării</h2>
+  <p class="small muted">
+    Ultimele rulări ale worker-ului pe fiecare platformă din profilurile active. O platformă care refuză
+    colectorul (HTTP 403, verificare, limită de cereri) e sărită și reîncercată la rularea următoare;
+    nu ocolim blocajele.
+  </p>
+  {% if platforms %}
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Platformă</th><th>Stare</th><th>Ultima rulare</th><th>Ultima reușită</th><th>Rulări recente</th></tr></thead>
+    <tbody>
+    {% for s in platforms %}
+      <tr>
+        <td>{{ platform(s.platform) }}</td>
+        <td class="small">
+          {% if not s.enabled %}<span class="tag">dezactivat în profil</span>
+          {% elif s.problem %}<span class="tag bad">problemă</span><div class="error">{{ s.problem }}</div>
+          {% else %}<span class="tag good">merge</span>{% endif %}
+        </td>
+        <td class="small nowrap">{% if s.last %}{{ moment(s.last.started_at) }}{% else %}–{% endif %}</td>
+        <td class="small nowrap">{% if s.last_ok %}{{ moment(s.last_ok) }}{% else %}–{% endif %}</td>
+        <td class="small">{% for r in s.runs %}<div class="nowrap">{{ moment(r.started_at) }}: {{ r.found }} văzute, {{ r.new }} noi{% if r.error %} · <span class="error">eroare</span>{% endif %}</div>{% endfor %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="empty">Niciun profil activ.</p>
+  {% endif %}
+</section>
+{% endblock %}

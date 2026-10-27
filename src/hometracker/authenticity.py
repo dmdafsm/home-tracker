@@ -15,9 +15,9 @@ from statistics import median
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .formatting import PLATFORM_NAMES, format_price
 from .history import PropertyHistory
 from .models import Listing, Photo, as_utc
-from .notify import PLATFORM_NAMES, format_price
 from .publishers import PublisherStats, publisher_stats
 
 PENALTIES = {"large": 30, "medium": 15, "small": 5}

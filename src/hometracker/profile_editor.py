@@ -19,7 +19,7 @@ from pydantic import ValidationError
 from .adapters import ADAPTERS
 from .profiles import Profile
 
-# Numele profilului e și numele fișierului și cheia alertelor trimise.
+# Numele profilului e și numele fișierului.
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{0,39}")
 MAX_BYTES = 64_000
 HISTORY_DIR = ".history"
@@ -50,7 +50,7 @@ def parse(text: str) -> Profile:
     except yaml.YAMLError as exc:
         raise ProfileError(f"YAML invalid: {exc}") from None
     if not isinstance(data, dict):
-        raise ProfileError("profilul trebuie să fie un dicționar YAML (chei: name, filters, notify, sources …)")
+        raise ProfileError("profilul trebuie să fie un dicționar YAML (chei: name, filters, preferences, sources …)")
     try:
         profile = Profile.model_validate(data)
     except ValidationError as exc:
@@ -64,9 +64,6 @@ def parse(text: str) -> Profile:
     for platform, source in profile.sources.items():
         if not source.url.startswith(("https://", "http://")):
             raise ProfileError(f"sources.{platform}.url: trebuie să înceapă cu https://")
-    channels = {*profile.notify.channels, *profile.notify.summary_channels}
-    if channels - {"ntfy", "email"}:
-        raise ProfileError(f"notify: canal necunoscut {', '.join(sorted(channels - {'ntfy', 'email'}))}")
     return profile
 
 
@@ -100,7 +97,7 @@ def save(directory: Path, text: str, *, original: ProfileFile | None) -> Profile
     profile = parse(text)
     if original is not None:
         if original.profile is not None and profile.name != original.profile.name:
-            # Alertele trimise sunt ținute pe numele profilului: un nume nou le-ar trimite din nou pe toate.
+            # Numele e și numele fișierului; un profil cu alt nume e un fișier nou.
             raise ProfileError("name: numele nu se schimbă la editare; creează un profil nou din acesta")
         path = original.path
     else:

@@ -14,7 +14,7 @@ from hometracker.web import create_app
 
 @pytest.fixture
 def web(setup, tmp_path):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     profiles = tmp_path / "profiles"
     profiles.mkdir()
     (profiles / "test.yaml").write_text(yaml.safe_dump(PROFILE.model_dump(mode="json")), encoding="utf-8")
@@ -35,7 +35,6 @@ def test_feed_shows_matching_apartments_only(web):
     assert "1 apartament" in page.text and "1 apartamente" not in page.text
     assert "150.000 €" in page.text and "etaj 1" in page.text
     assert 'href="/property/' in page.text and 'src="/photo/' in page.text
-    assert "alertat" in page.text
 
 
 def test_removed_apartments_are_hidden_unless_asked(web):

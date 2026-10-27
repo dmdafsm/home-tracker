@@ -39,7 +39,7 @@ def test_invalid_platform_is_refused(tmp_path):
 
 
 def test_pipeline_keeps_photos_of_a_hostile_id_inside_data(setup, tmp_path: Path):
-    catalog, _notifier, sessions, run = setup
+    catalog, sessions, run = setup
     catalog["storia"] = [listing("storia", "../../escape", [1, 2, 3])]
     run()
     with sessions() as session:

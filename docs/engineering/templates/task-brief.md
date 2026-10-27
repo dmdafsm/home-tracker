@@ -8,11 +8,11 @@ What the result changes for the maintainer and the observable output. Relevant r
 
 ## Architecture impact
 
-Existing pattern with the owning module/table, or a material change with a linked decision record. Cover schema, containers, platforms and notifications when affected.
+Existing pattern with the owning module/table, or a material change with a linked decision record. Cover schema, containers, platforms and the web interface when affected.
 
 ## Acceptance and verification
 
-Observable criteria and the tests or real checks that establish them (fixtures, pipeline test, `dump` on a real page, real notification, browser check). Distinguish required, not applicable and blocked.
+Observable criteria and the tests or real checks that establish them (fixtures, pipeline test, `dump` on a real page, browser check). Distinguish required, not applicable and blocked.
 
 ## Handoff
 

@@ -22,23 +22,6 @@ preferences:
   balcony: 25
   known_floor: 10
 
-# Scorul minim pentru o notificare instant.
-notify:
-  min_score: 60
-  price_drop_percent: 3
-  # Scăderile de preț: doar pentru apartamentele salvate din interfață ("saved") sau pentru toate
-  # cele deja alertate ("alerted").
-  price_drop_scope: saved
-  channels: [ntfy, email]
-  # Rezumatul zilnic (după SUMMARY_HOUR): noi sub prag, dispărute, goluri. [] îl dezactivează.
-  summary_channels: [email]
-  # Alertele instant cer și un scor de autenticitate cel puțin atât (0–100). 30 oprește doar
-  # apartamentele cu cel puțin trei semnale mari; restul primesc alerta, cu semnalele în mesaj.
-  min_authenticity: 30
-  # Destinații proprii profilului (opțional); fără ele se folosesc NTFY_TOPIC și EMAIL_TO din .env.
-  # ntfy_topic: apartamente-mama
-  # email_to: cineva@example.com
-
 # Căutările de pe fiecare platformă. Cel mai sigur: setează filtrele pe site,
 # în browser, și copiază aici URL-ul rezultat, sortat după cele mai noi.
 # URL-urile de mai jos sunt un punct de plecare și trebuie verificate.

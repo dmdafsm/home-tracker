@@ -10,8 +10,7 @@ Report vulnerabilities privately through the GitHub **Security** tab → **Repor
 
 - The adapters: handling of downloaded HTML, JSON and images (parsing untrusted input, file paths, image decoding).
 - The Docker setup: every container port is published on the host loopback only; the database is not published at all.
-- Remote access: ntfy with `deny-all` default access and a token, the web interface behind Cloudflare Access.
-- Notifications: what listing data is sent to ntfy (and through ntfy.sh for iOS push) and by email.
+- Remote access: the web interface behind Cloudflare Access; its POST forms (labels, merges, profile editor) and the same-origin check.
 - The repository's CI workflow, hooks and dependency setup.
 
 Out of scope: fake or wrong listings that match what the platform shows, and vulnerabilities in the platforms themselves.

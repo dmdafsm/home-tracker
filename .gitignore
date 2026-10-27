@@ -1,4 +1,4 @@
-# Profilurile proprii (pot avea topic ntfy și email); în repo rămâne doar exemplul.
+# Profilurile proprii rămân locale; în repo rămâne doar exemplul.
 profiles/*.yaml
 profiles/*.yml
 !profiles/gheorgheni-mama.yaml

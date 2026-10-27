@@ -27,18 +27,6 @@ class Settings:
     data_dir: Path = Path("data")
     profiles_dir: Path = Path("profiles")
 
-    ntfy_url: str = ""
-    ntfy_public_url: str = ""
-    ntfy_token: str = ""
-    ntfy_topic: str = "apartamente"
-
-    smtp_host: str = ""
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    email_from: str = ""
-    email_to: str = ""
-
     interval_min_minutes: int = 30
     interval_max_minutes: int = 60
     pages_normal: int = 2
@@ -56,8 +44,7 @@ class Settings:
     osm_lookups_per_run: int = 5
     overpass_url: str = "https://overpass-api.de/api/interpreter"
 
-    # Rezumatul zilnic pleacă la prima rulare de după această oră locală.
-    summary_hour: int = 20
+    # Datele din interfață se afișează în acest fus orar.
     timezone: str = "Europe/Bucharest"
 
     photos_per_listing: int = 5
@@ -87,16 +74,6 @@ def load_settings() -> Settings:
         database_url=_env("DATABASE_URL", f"sqlite:///{data_dir / 'hometracker.db'}"),
         data_dir=data_dir,
         profiles_dir=Path(_env("PROFILES_DIR", "profiles")),
-        ntfy_url=_env("NTFY_URL"),
-        ntfy_public_url=_env("NTFY_PUBLIC_URL"),
-        ntfy_token=_env("NTFY_TOKEN"),
-        ntfy_topic=_env("NTFY_TOPIC", "apartamente"),
-        smtp_host=_env("SMTP_HOST"),
-        smtp_port=_env_int("SMTP_PORT", 587),
-        smtp_user=_env("SMTP_USER"),
-        smtp_password=_env("SMTP_PASSWORD"),
-        email_from=_env("EMAIL_FROM"),
-        email_to=_env("EMAIL_TO"),
         interval_min_minutes=_env_int("INTERVAL_MIN_MINUTES", 30),
         interval_max_minutes=_env_int("INTERVAL_MAX_MINUTES", 60),
         pages_normal=_env_int("PAGES_NORMAL", 2),
@@ -107,7 +84,6 @@ def load_settings() -> Settings:
         log_level=_env("LOG_LEVEL", "INFO"),
         recheck_after_hours=_env_int("RECHECK_AFTER_HOURS", 24),
         recheck_per_run=_env_int("RECHECK_PER_RUN", 10),
-        summary_hour=_env_int("SUMMARY_HOUR", 20),
         osm_lookups_per_run=_env_int("OSM_LOOKUPS_PER_RUN", 5),
         overpass_url=_env("OVERPASS_URL", "https://overpass-api.de/api/interpreter"),
         timezone=_env("TIMEZONE", "Europe/Bucharest"),

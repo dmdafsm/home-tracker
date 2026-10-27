@@ -1,7 +1,7 @@
 [project]
 name = "hometracker"
 version = "0.1.0"
-description = "Tracker de piață imobiliară: colectează anunțuri, le grupează pe apartamente și trimite alerte."
+description = "Tracker de piață imobiliară: colectează anunțuri, le grupează pe apartamente și le arată într-o interfață web."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

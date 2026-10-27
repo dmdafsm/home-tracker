@@ -20,16 +20,15 @@ Profilurile sunt fișiere de configurare (YAML), nu cod. Fiecare are filtre dure
 
 ## Arhitectură
 
-Totul pornește cu un singur `docker compose up`. Sunt patru containere: `db` (PostgreSQL), `worker` (scheduler, colectoare, procesare), `web` (interfața) și `ntfy`. Limbajul e Python 3.12, cu httpx, Playwright, imagehash și FastAPI.
+Totul pornește cu un singur `docker compose up`. Sunt trei containere: `db` (PostgreSQL), `worker` (scheduler, colectoare, procesare) și `web` (interfața). Limbajul e Python 3.12, cu httpx, Playwright, imagehash și FastAPI.
 
 ```
 platforme ──> worker (colectoare, parsare, potrivire, deduplicare) ──> db (PostgreSQL)
                  │                                                     │
-                 └──> data/ (HTML brut, poze)                          ├──> web ──> Cloudflare Tunnel + Access
-                                                                       └──> ntfy ──> telefon
+                 └──> data/ (HTML brut, poze)                          └──> web ──> Cloudflare Tunnel + Access
 ```
 
-Colectoarele scriu în arhivă, iar parsarea alimentează baza de date. Celelalte servicii lucrează doar cu baza. Spre exterior ies doar notificările și interfața web.
+Colectoarele scriu în arhivă, iar parsarea alimentează baza de date. Celelalte servicii lucrează doar cu baza. Spre exterior iese doar interfața web. Tool-ul nu trimite notificări: totul se urmărește în interfață.
 
 ## Surse de date și colectare
 
@@ -64,7 +63,7 @@ Distincția centrală e între **anunț** și **apartament**. Un apartament fizi
 | `publisher` | cine publică | tip declarat (proprietar/agenție), nume, telefon (hash), nr. anunțuri active |
 | `property` | apartamentul fizic (cluster) | adresă estimată, bloc, etaj, mp, an construcție estimat, scor autenticitate |
 | `property_listing` | legătura anunț–apartament | scor potrivire, motiv (poze, text, telefon) |
-| `profile` / `match` / `alert` | criterii, potriviri, notificări trimise | profil, apartament, scor, trimis la |
+| `profile` / `match` | criterii și potriviri | profil, apartament, scor |
 
 Baza de date e PostgreSQL, cu PostGIS pentru coordonate (cartier, distanțe) și pgvector pentru căutarea rapidă de poze similare. Pozele stau pe disc, într-un volum Docker.
 
@@ -120,46 +119,28 @@ Nu există o sursă publică unică și gratuită cu anul fiecărui bloc. Tool-u
 
 Pentru apartamentul ales, extrasul CF de la ANCPI e oricum necesar înainte de cumpărare. Pentru anunțurile de pe piață, tool-ul folosește estimarea. Ce publică geoportalul Primăriei și ce conține extrasul CF: [surse-an-constructie.md](surse-an-constructie.md) (etapa 4).
 
-## Notificări
-
-Notificările pornesc din motorul de potrivire și pleacă pe canalele alese în profil. Recomandarea e ntfy pentru instant și email pentru rezumat.
-
-| Canal | Cum funcționează | Avantaj | Limită |
-| --- | --- | --- | --- |
-| **ntfy** (self-hosted) | container în același Docker; aplicația ntfy pe telefon se abonează la un topic | open-source, fără cont, push instant | telefonul ajunge la server prin Cloudflare Tunnel; pe iOS, push-ul instant cere ca serverul să trimită prin ntfy.sh (\`upstream-base-url\`) |
-| **Email** (SMTP) | un cont Gmail sau Fastmail cu parolă de aplicație | universal, bun pentru rezumatul zilnic | nu e instant pe telefon |
-| **Notificare desktop** | un mic script local care citește din API-ul local | zero configurare | doar când stai la laptop |
-| **Web Push** din interfață | notificări din browser | fără aplicație extra | cere HTTPS și browserul pornit |
-
-Regulile de trimitere:
-
-- **Instant:** apartament nou, cu potrivire peste prag și scor de autenticitate peste prag.
-- **Instant:** scădere de preț peste 3% la un apartament salvat.
-- **Zilnic:** rezumat cu anunțurile noi slab potrivite, cu cele dispărute (posibil vândute) și cu republicările.
-- Un apartament declanșează o singură alertă, chiar dacă apare pe 5 platforme. Alertele noi vin doar pentru schimbări.
-
 ## Interfață web
 
-Interfața e o aplicație web locală, disponibilă la `localhost:8080`. Prin Cloudflare Tunnel, protejată cu Cloudflare Access, o poți deschide și de pe telefon. Are cinci ecrane:
+Interfața e o aplicație web locală, disponibilă la `localhost:8080`. Prin Cloudflare Tunnel, protejată cu Cloudflare Access, o poți deschide și de pe telefon. Ecranele:
 
 - **Feed:** apartamentele potrivite pentru profilul activ, ordonate după scor. Fiecare card arată poza principală, prețul minim și maxim, etajul, scorul de autenticitate și numărul de anunțuri.
 - **Apartament:** toate anunțurile din cluster, pe o axă a timpului, cu graficul prețului, publicatorii, semnalele de autenticitate și anul estimat. Butoanele: salvează, ascunde, „confirmat real”, „fals”, „nu e același apartament”.
 - **Hartă:** clusterele din cartier, cu filtre.
 - **Publicatori:** agențiile și „proprietarii”, cu numărul de anunțuri, ce procent au preluat de la alții și diferențele medii de preț.
-- **Profiluri:** editarea criteriilor și a canalelor de notificare.
+- **Profiluri:** editarea criteriilor.
+- **Stare:** ultimele rulări pe fiecare platformă și problemele de colectare (blocaj, niciun rezultat, worker oprit), cu un banner în feed cât timp există o problemă.
 
 Stack-ul propus: backend FastAPI (Python), care servește și API-ul; frontend în HTMX sau un React mic. HTMX e mai simplu de întreținut pentru un singur utilizator.
 
 ### Acces din exterior
 
-Tracker-ul nu configurează singur accesul din exterior. Într-un tunel Cloudflare se adaugă două reguli de ingress (hostname-urile de mai jos sunt exemple):
+Tracker-ul nu configurează singur accesul din exterior. Într-un tunel Cloudflare se adaugă o regulă de ingress (hostname-ul de mai jos e un exemplu):
 
 | Hostname | Duce la | Protecție |
 | --- | --- | --- |
 | `tracker.example.com` | `web`, pe portul publicat local (de exemplu `localhost:8080`) | Cloudflare Access, doar contul tău |
-| `ntfy.example.com` | `ntfy`, pe portul publicat local (de exemplu `localhost:8090`) | autentificarea proprie ntfy (`auth-default-access: deny-all` și un token pentru telefon), fără Access |
 
-ntfy rămâne în afara Cloudflare Access pentru că aplicația de pe telefon nu poate trece prin login-ul Access. Containerele publică porturile doar pe `127.0.0.1`, așa că rămân inaccesibile din rețeaua locală.
+Containerele publică porturile doar pe `127.0.0.1`, așa că rămân inaccesibile din rețeaua locală.
 
 ## Aspecte legale și riscuri
 
@@ -171,8 +152,8 @@ Pentru uz personal, la volum mic, riscul principal e tehnic, nu juridic. Lucruri
 | Blocări anti-bot | IP-ul de acasă poate fi limitat temporar | pauze, cache, Playwright doar unde e necesar; niciodată rezolvare de CAPTCHA |
 | Date personale (GDPR) | telefoane și nume ale proprietarilor | telefonul se stochează doar ca hash; textul brut rămâne local |
 | Drepturi asupra pozelor | pozele aparțin publicatorilor | stocate doar local pentru comparare, nerepublicate |
-| Schimbări de structură | un parser se strică fără avertisment | teste pe pagini salvate și o alertă când un adapter întoarce 0 rezultate |
-| Calculator oprit sau în sleep | nu rulează colectarea | la pornire rulează o recuperare: mai multe pagini de căutare, sortate după cele mai noi; anunțurile apărute și dispărute cât e calculatorul oprit se pierd; rezumatul zilnic arată golurile; dacă devine o problemă, \`worker\` se mută pe un mini-server |
+| Schimbări de structură | un parser se strică fără avertisment | teste pe pagini salvate; pagina de stare arată când un adapter întoarce 0 rezultate |
+| Calculator oprit sau în sleep | nu rulează colectarea | la pornire rulează o recuperare: mai multe pagini de căutare, sortate după cele mai noi; anunțurile apărute și dispărute cât e calculatorul oprit se pierd; pagina de stare arată golurile; dacă devine o problemă, \`worker\` se mută pe un mini-server |
 
 Dacă vrei să-l deschizi altor utilizatori, trebuie un aviz juridic despre termenii platformelor și despre GDPR. Atunci ar fi preferabile parteneriatele sau API-urile oficiale, unde există.
 
@@ -180,26 +161,26 @@ Dacă vrei să-l deschizi altor utilizatori, trebuie un aviz juridic despre term
 
 Ordinea e gândită așa încât tool-ul să-ți fie util pentru căutarea mamei încă din prima etapă. Restul îl construiești în paralel cu căutarea, în cele 6 luni.
 
-1. **MVP: alerte utile**, ținta fiind primele 1–2 weekenduri.
-   - Docker compose cu `db`, `worker` și `ntfy`.
+1. **MVP: colectare**, ținta fiind primele 1–2 weekenduri.
+   - Docker compose cu `db` și `worker`.
    - Adaptere pentru Storia, OLX și Imobiliare.ro, plus profilul Gheorgheni.
    - Deduplicare simplă: aceeași platformă și id, apoi pHash pe poze.
-   - Alertă ntfy pentru fiecare apartament nou potrivit.
-   - Gata când primești pe telefon un anunț real, înaintea emailului de la Storia.
 2. **Clustere și istoric**
    - Deduplicare completă (poze, text, atribute, telefon), istoricul prețurilor, detectarea republicărilor.
    - Interfață web cu feed și pagina de apartament.
-   - Rezumat zilnic pe email.
 3. **Autenticitate și publicatori**
    - Scorul cu semnale explicate, pagina de publicatori, butoanele de etichetare.
    - Încă două platforme (Publi24, Lajumate).
 4. **Anul construcției și profiluri multiple**
    - Estimarea anului din text, tipologie și OSM, plus verificarea surselor Primăriei.
-   - Editor de profiluri din interfață și canale de notificare per profil.
+   - Editor de profiluri din interfață.
+5. **Interfața ca loc principal de lucru**
+   - Fără notificări (ntfy, email, rezumat): pagina de stare arată problemele de colectare.
+   - Material Design, filtre și sortări în feed, carusel de poze, acțiuni direct pe card.
 
 Ce trebuie decis înainte de codul pentru etapa 1:
 
-- [x] Acces de pe telefon: Cloudflare Tunnel către `ntfy` și `web`, cu Cloudflare Access în fața interfeței.
+- [x] Acces de pe telefon: Cloudflare Tunnel către `web`, cu Cloudflare Access în fața interfeței.
 - [x] Etaj: parter simplu, parter înalt sau etajul 1.
 - [x] Calculatorul nu stă mereu pornit: colectarea rulează când e deschis și recuperează la pornire.
 - [x] Domeniu: unul propriu, prin Cloudflare Tunnel.
