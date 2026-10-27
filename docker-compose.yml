@@ -1,0 +1,57 @@
+name: home-tracker
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hometracker
+      POSTGRES_USER: hometracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?seteaza POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hometracker -d hometracker"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      ntfy:
+        condition: service_started
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://hometracker:${POSTGRES_PASSWORD}@db:5432/hometracker
+      DATA_DIR: /data
+      PROFILES_DIR: /app/profiles
+      NTFY_URL: http://ntfy:80
+    volumes:
+      - ./data:/data
+      - ./profiles:/app/profiles:ro
+
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    restart: unless-stopped
+    command: serve
+    environment:
+      NTFY_BASE_URL: ${NTFY_PUBLIC_URL:?seteaza NTFY_PUBLIC_URL in .env}
+      NTFY_BEHIND_PROXY: "true"
+      NTFY_CACHE_FILE: /var/lib/ntfy/cache.db
+      NTFY_AUTH_FILE: /var/lib/ntfy/user.db
+      NTFY_AUTH_DEFAULT_ACCESS: deny-all
+      # Necesar pentru push instant pe iOS: ntfy.sh primește doar un ID de mesaj, nu conținutul.
+      NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
+    volumes:
+      - ntfydata:/var/lib/ntfy
+    # Doar pe localhost: accesul din exterior trece prin tunelul Cloudflare existent.
+    ports:
+      - "127.0.0.1:${NTFY_LOCAL_PORT:-8090}:80"
+
+volumes:
+  pgdata:
+  ntfydata:

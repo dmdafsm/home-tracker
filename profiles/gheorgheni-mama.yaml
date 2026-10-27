@@ -1,0 +1,40 @@
+# Profil de căutare. Fiecare fișier .yaml din profiles/ e un profil separat.
+name: gheorgheni-mama
+description: Apartament pentru mama, Gheorgheni, parter sau etajul 1
+active: true
+
+# Filtre dure: un anunț care nu le trece e ignorat.
+filters:
+  price_eur: { min: 130000, max: 165000 }
+  # Valori posibile: basement, ground, raised_ground, 1, 2, ... , attic
+  floors: [ground, raised_ground, 1]
+  # Un anunț fără etaj declarat nu e exclus, dar primește un scor mai mic.
+  allow_unknown_floor: true
+  area_m2: { min: 35 }
+  # Textul anunțului (titlu, descriere, localizare) trebuie să conțină cel puțin una.
+  text_any: [gheorgheni]
+  # Anunțuri respinse dacă textul conține oricare dintre acestea. Etajul e deja filtrat mai sus;
+  # cuvinte ca „demisol” nu sunt puse aici, pentru că apar și în „boxă la demisol”.
+  text_none: ["spatiu comercial", "regim hotelier"]
+
+# Preferințe: nu exclud, doar ridică scorul (0–100).
+preferences:
+  balcony: 25
+  known_floor: 10
+
+# Scorul minim pentru o notificare instant.
+notify:
+  min_score: 60
+  price_drop_percent: 3
+  channels: [ntfy, email]
+
+# Căutările de pe fiecare platformă. Cel mai sigur: setează filtrele pe site,
+# în browser, și copiază aici URL-ul rezultat, sortat după cele mai noi.
+# URL-urile de mai jos sunt un punct de plecare și trebuie verificate.
+sources:
+  storia:
+    url: "https://www.storia.ro/ro/rezultate/vanzare/apartament/cluj/cluj--napoca/gheorgheni?priceMin=130000&priceMax=165000&by=LATEST&direction=DESC"
+  olx:
+    url: "https://www.olx.ro/imobiliare/apartamente-garsoniere-de-vanzare/cluj-napoca/q-gheorgheni/?currency=EUR&search%5Border%5D=created_at:desc&search%5Bfilter_float_price:from%5D=130000&search%5Bfilter_float_price:to%5D=165000"
+  imobiliare:
+    url: "https://www.imobiliare.ro/vanzare-apartamente/cluj-napoca/gheorgheni?pret=130000-165000"
