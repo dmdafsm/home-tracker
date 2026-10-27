@@ -29,7 +29,7 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
   potrivesc, pentru că agențiile refolosesc poze cu fațada blocului.
 - **Alertele** se trimit o singură dată pe apartament și profil, oricâte platforme îl
   publică. O scădere de preț de peste 3% generează o alertă separată.
-- **Cu Mac-ul închis** nu se colectează nimic. La pornire și după o pauză mai lungă de
+- **Cu calculatorul oprit sau în sleep** nu se colectează nimic. La pornire și după o pauză mai lungă de
   două intervale, rularea citește mai multe pagini (`PAGES_CATCHUP`), ca să recupereze
   ce a apărut între timp.
 - **Poze și HTML** se salvează în `data/`, local, doar pentru comparare și reprocesare.
@@ -37,7 +37,7 @@ scheduler ─► adaptere (storia, olx, imobiliare) ─► arhivă HTML brut (da
 
 ## Instalare
 
-Ai nevoie de Docker Desktop pe Mac.
+Ai nevoie de Docker (de exemplu Docker Desktop).
 
 ```sh
 git clone https://github.com/dmdafsm/home-tracker.git
@@ -58,15 +58,16 @@ docker compose up -d worker                        # repornește worker-ul cu to
 docker compose exec worker hometracker test-notify ntfy
 ```
 
-În aplicația ntfy de pe telefon: adaugă serverul `https://ntfy.example.com`, autentifică-te
+În aplicația ntfy de pe telefon: adaugă serverul din `NTFY_PUBLIC_URL`, autentifică-te
 cu utilizatorul creat mai sus și abonează-te la topicul din `NTFY_TOPIC` (implicit
 `apartamente`).
 
-### Tunelul Cloudflare
+### Acces din exterior (Cloudflare Tunnel)
 
-Tunelul există deja pe Mac. Proiectul nu îl configurează: expune doar serviciul HTTP
-al ntfy pe `127.0.0.1:8090` (portul din `NTFY_LOCAL_PORT`). Adaugă în configurarea
-tunelului o regulă de ingress, înaintea regulii finale `http_status:404`:
+Proiectul nu configurează accesul din exterior: expune doar serviciul HTTP al ntfy pe
+`127.0.0.1:8090` (portul din `NTFY_LOCAL_PORT`). Ca telefonul să ajungă la el, poți folosi
+un tunel Cloudflare. Adaugă în configurarea tunelului o regulă de ingress, înaintea regulii
+finale `http_status:404`, cu hostname-ul tău:
 
 ```yaml
   - hostname: ntfy.example.com
@@ -76,7 +77,7 @@ tunelului o regulă de ingress, înaintea regulii finale `http_status:404`:
 Dacă `cloudflared` rulează la rândul lui într-un container Docker, folosește
 `http://host.docker.internal:8090` în loc de `localhost`.
 
-Nu pune `ntfy.example.com` în spatele Cloudflare Access: aplicația ntfy nu poate trece
+Nu pune hostname-ul ntfy în spatele Cloudflare Access: aplicația ntfy nu poate trece
 prin login-ul Access și se bazează pe autentificarea proprie a serverului. Interfața
 web (etapa 2) va primi un hostname separat, protejat cu Access.
 
