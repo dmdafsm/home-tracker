@@ -44,9 +44,14 @@ def _run_once(settings: Settings, sessions, *, catchup: bool, profile_name: str 
     pages = settings.pages_catchup if catchup else settings.pages_normal
     with PoliteClient(settings) as client:
         stats = Pipeline(settings, sessions, client, Notifier(settings)).run(profiles, pages)
-    log.info("rulare %s gata: %d văzute, %d noi, %d alerte%s",
-             "de recuperare" if catchup else "normală", stats.found, stats.new, stats.alerts,
-             f", erori: {'; '.join(stats.errors)}" if stats.errors else "")
+    log.info(
+        "rulare %s gata: %d văzute, %d noi, %d alerte%s",
+        "de recuperare" if catchup else "normală",
+        stats.found,
+        stats.new,
+        stats.alerts,
+        f", erori: {'; '.join(stats.errors)}" if stats.errors else "",
+    )
 
 
 def cmd_loop(args: argparse.Namespace) -> None:
@@ -96,13 +101,24 @@ def cmd_dump(args: argparse.Namespace) -> None:
     if items:
         print(f"\nca pagină de căutare: {len(items)} anunțuri")
         for item in items[:10]:
-            print(f"  {item.external_id:>14}  {format_price(item.price_eur):>14}  {floor_label(item.floor):<16} "
-                  f"{item.area_m2 or '?':>5} mp  {item.title[:60]}")
+            print(
+                f"  {item.external_id:>14}  {format_price(item.price_eur):>14}  {floor_label(item.floor):<16} "
+                f"{item.area_m2 or '?':>5} mp  {item.title[:60]}"
+            )
     detail = adapter.parse_detail(html, args.url)
     if detail.title or detail.price_eur:
         print("\nca pagină de detaliu:")
-        for name in ("title", "price_eur", "area_m2", "rooms", "floor", "balcony", "publisher_type",
-                     "publisher_name", "location_text"):
+        for name in (
+            "title",
+            "price_eur",
+            "area_m2",
+            "rooms",
+            "floor",
+            "balcony",
+            "publisher_type",
+            "publisher_name",
+            "location_text",
+        ):
             print(f"  {name:<15} {getattr(detail, name)!r}")
         print(f"  {'photos':<15} {len(detail.photo_urls)}")
         print(f"  {'description':<15} {detail.description[:200]!r}")
@@ -127,12 +143,16 @@ def cmd_matches(args: argparse.Namespace) -> None:
     sessions = _setup(settings)
     with sessions() as session:
         rows = session.execute(
-            select(Alert, Listing).join(Listing, Alert.listing_id == Listing.id)
-            .order_by(Alert.sent_at.desc()).limit(args.limit)
+            select(Alert, Listing)
+            .join(Listing, Alert.listing_id == Listing.id)
+            .order_by(Alert.sent_at.desc())
+            .limit(args.limit)
         ).all()
         for alert, listing in rows:
-            print(f"{alert.sent_at:%d.%m %H:%M}  {alert.kind:<10} {format_price(listing.price_eur):>12}  "
-                  f"{floor_label(listing.floor):<14} {listing.platform:<10} {listing.url}")
+            print(
+                f"{alert.sent_at:%d.%m %H:%M}  {alert.kind:<10} {format_price(listing.price_eur):>12}  "
+                f"{floor_label(listing.floor):<14} {listing.platform:<10} {listing.url}"
+            )
 
 
 def main(argv: list[str] | None = None) -> None:

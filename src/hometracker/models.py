@@ -77,9 +77,7 @@ class Listing(Base):
     property_id: Mapped[int | None] = mapped_column(ForeignKey("property.id"), index=True)
     property: Mapped[Property | None] = relationship(back_populates="listings")
     photos: Mapped[list[Photo]] = relationship(back_populates="listing", cascade="all, delete-orphan")
-    snapshots: Mapped[list[ListingSnapshot]] = relationship(
-        back_populates="listing", cascade="all, delete-orphan"
-    )
+    snapshots: Mapped[list[ListingSnapshot]] = relationship(back_populates="listing", cascade="all, delete-orphan")
 
 
 class ListingSnapshot(Base):

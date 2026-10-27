@@ -8,8 +8,13 @@ PROFILES_DIR = Path(__file__).resolve().parents[1] / "profiles"
 
 def make(**kwargs) -> ListingData:
     base = dict(
-        platform="storia", external_id="1", url="https://example.test/1",
-        title="Apartament 2 camere Gheorgheni", price_eur=148000, area_m2=52, floor="1",
+        platform="storia",
+        external_id="1",
+        url="https://example.test/1",
+        title="Apartament 2 camere Gheorgheni",
+        price_eur=148000,
+        area_m2=52,
+        floor="1",
         is_detail=True,
     )
     base.update(kwargs)

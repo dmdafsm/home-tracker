@@ -27,44 +27,66 @@ def olx_page(state: dict) -> str:
 
 # ------------------------------------------------------------------ Storia
 
-STORIA_SEARCH = next_data_page({
-    "data": {"searchAds": {"items": [
-        {
-            "id": 7001, "title": "Apartament 2 camere, parter înalt, Gheorgheni",
-            "slug": "apartament-2-camere-gheorgheni-IDabc1",
-            "totalPrice": {"value": 149000, "currency": "EUR"},
-            "areaInSquareMeters": 51, "roomsNumber": "TWO", "floorNumber": None,
-            "isPrivateOwner": True, "agency": None, "dateCreated": "2026-10-20 09:15:00",
-            "location": {"reverseGeocoding": {"locations": [{"fullName": "Gheorgheni, Cluj-Napoca, Cluj"}]}},
-            "images": [{"medium": "https://img.test/a-m.jpg", "large": "https://img.test/a-l.jpg"}],
+STORIA_SEARCH = next_data_page(
+    {
+        "data": {
+            "searchAds": {
+                "items": [
+                    {
+                        "id": 7001,
+                        "title": "Apartament 2 camere, parter înalt, Gheorgheni",
+                        "slug": "apartament-2-camere-gheorgheni-IDabc1",
+                        "totalPrice": {"value": 149000, "currency": "EUR"},
+                        "areaInSquareMeters": 51,
+                        "roomsNumber": "TWO",
+                        "floorNumber": None,
+                        "isPrivateOwner": True,
+                        "agency": None,
+                        "dateCreated": "2026-10-20 09:15:00",
+                        "location": {
+                            "reverseGeocoding": {"locations": [{"fullName": "Gheorgheni, Cluj-Napoca, Cluj"}]}
+                        },
+                        "images": [{"medium": "https://img.test/a-m.jpg", "large": "https://img.test/a-l.jpg"}],
+                    },
+                    {
+                        "id": 7002,
+                        "title": "3 camere Gheorgheni",
+                        "slug": "trei-camere-IDabc2",
+                        "totalPrice": {"value": 735000, "currency": "RON"},
+                        "areaInSquareMeters": 68,
+                        "roomsNumber": "THREE",
+                        "floorNumber": "FOURTH",
+                        "isPrivateOwner": False,
+                        "agency": {"name": "Agenția X"},
+                        "images": [],
+                    },
+                ]
+            }
         },
-        {
-            "id": 7002, "title": "3 camere Gheorgheni", "slug": "trei-camere-IDabc2",
-            "totalPrice": {"value": 735000, "currency": "RON"},
-            "areaInSquareMeters": 68, "roomsNumber": "THREE", "floorNumber": "FOURTH",
-            "isPrivateOwner": False, "agency": {"name": "Agenția X"},
-            "images": [],
-        },
-    ]}},
-})
+    }
+)
 
-STORIA_DETAIL = next_data_page({
-    "ad": {
-        "id": 7001, "title": "Apartament 2 camere, parter înalt, Gheorgheni",
-        "description": "<p>Apartament renovat, <b>balcon închis</b>, bloc de cărămidă.</p>",
-        "characteristics": [
-            {"key": "price", "value": "149000", "currency": "EUR"},
-            {"key": "m", "value": "51"},
-            {"key": "rooms_num", "value": "2"},
-            {"key": "floor_no", "value": "ground_floor", "localizedValue": "parter"},
-            {"key": "build_year", "value": "1978"},
-        ],
-        "images": [{"large": "https://img.test/a-l.jpg"}, {"large": "https://img.test/b-l.jpg"}],
-        "location": {"coordinates": {"latitude": 46.77, "longitude": 23.63}},
-        "advertiserType": "private", "owner": {"name": "Ion"},
-        "createdAt": "2026-10-20T09:15:00Z",
-    },
-})
+STORIA_DETAIL = next_data_page(
+    {
+        "ad": {
+            "id": 7001,
+            "title": "Apartament 2 camere, parter înalt, Gheorgheni",
+            "description": "<p>Apartament renovat, <b>balcon închis</b>, bloc de cărămidă.</p>",
+            "characteristics": [
+                {"key": "price", "value": "149000", "currency": "EUR"},
+                {"key": "m", "value": "51"},
+                {"key": "rooms_num", "value": "2"},
+                {"key": "floor_no", "value": "ground_floor", "localizedValue": "parter"},
+                {"key": "build_year", "value": "1978"},
+            ],
+            "images": [{"large": "https://img.test/a-l.jpg"}, {"large": "https://img.test/b-l.jpg"}],
+            "location": {"coordinates": {"latitude": 46.77, "longitude": 23.63}},
+            "advertiserType": "private",
+            "owner": {"name": "Ion"},
+            "createdAt": "2026-10-20T09:15:00Z",
+        },
+    }
+)
 
 
 def test_storia_search():
@@ -96,25 +118,41 @@ def test_storia_detail_and_merge():
 
 # --------------------------------------------------------------------- OLX
 
-OLX_SEARCH = olx_page({"listing": {"listing": {"ads": [
+OLX_SEARCH = olx_page(
     {
-        "id": 301, "url": "https://www.olx.ro/d/oferta/ap-2-cam-gheorgheni-IDx1.html",
-        "title": "Proprietar vând ap. 2 cam Gheorgheni",
-        "description": "Etaj 1/4, balcon, aproape de Iulius. Tel 0722 123 456<br/>",
-        "params": [
-            {"key": "floor", "name": "Etaj", "value": "1", "normalizedValue": "1"},
-            {"key": "m", "name": "Suprafata utila", "value": "54 m²", "normalizedValue": "54"},
-            {"key": "rooms", "name": "Compartimentare", "value": "2 camere"},
-        ],
-        "price": {"regularPrice": {"value": 152000, "currencyCode": "EUR"}},
-        "photos": ["https://ireland.apollo.olxcdn.com/v1/files/abc/image;s={width}x{height}"],
-        "location": {"cityName": "Cluj-Napoca", "districtName": "Gheorgheni"},
-        "map": {"lat": 46.76, "lon": 23.62},
-        "user": {"name": "Maria"}, "isBusiness": False, "createdTime": "2026-10-25T10:00:00+03:00",
-    },
-    {"id": 302, "url": "https://www.olx.ro/d/oferta/x.html", "title": "Din Storia",
-     "externalUrl": "https://www.storia.ro/ro/oferta/x", "params": []},
-]}}})
+        "listing": {
+            "listing": {
+                "ads": [
+                    {
+                        "id": 301,
+                        "url": "https://www.olx.ro/d/oferta/ap-2-cam-gheorgheni-IDx1.html",
+                        "title": "Proprietar vând ap. 2 cam Gheorgheni",
+                        "description": "Etaj 1/4, balcon, aproape de Iulius. Tel 0722 123 456<br/>",
+                        "params": [
+                            {"key": "floor", "name": "Etaj", "value": "1", "normalizedValue": "1"},
+                            {"key": "m", "name": "Suprafata utila", "value": "54 m²", "normalizedValue": "54"},
+                            {"key": "rooms", "name": "Compartimentare", "value": "2 camere"},
+                        ],
+                        "price": {"regularPrice": {"value": 152000, "currencyCode": "EUR"}},
+                        "photos": ["https://ireland.apollo.olxcdn.com/v1/files/abc/image;s={width}x{height}"],
+                        "location": {"cityName": "Cluj-Napoca", "districtName": "Gheorgheni"},
+                        "map": {"lat": 46.76, "lon": 23.62},
+                        "user": {"name": "Maria"},
+                        "isBusiness": False,
+                        "createdTime": "2026-10-25T10:00:00+03:00",
+                    },
+                    {
+                        "id": 302,
+                        "url": "https://www.olx.ro/d/oferta/x.html",
+                        "title": "Din Storia",
+                        "externalUrl": "https://www.storia.ro/ro/oferta/x",
+                        "params": [],
+                    },
+                ]
+            }
+        }
+    }
+)
 
 
 def test_olx_search_skips_storia_mirrors():
@@ -166,7 +204,8 @@ def test_imobiliare_search_uses_offer_links_only():
 
 def test_imobiliare_detail():
     detail = ImobiliareAdapter(None, SETTINGS).parse_detail(
-        IMOBILIARE_DETAIL, "https://www.imobiliare.ro/oferta/apartament-2-camere-123456789")
+        IMOBILIARE_DETAIL, "https://www.imobiliare.ro/oferta/apartament-2-camere-123456789"
+    )
     assert detail.price_eur == 139900 and detail.area_m2 == 49 and detail.rooms == 2
     assert detail.floor == "raised_ground" and detail.balcony is False
 

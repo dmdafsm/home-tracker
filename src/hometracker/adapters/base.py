@@ -48,12 +48,10 @@ class Adapter(ABC):
         return merge(listing, detail)
 
     @abstractmethod
-    def parse_search(self, html: str, url: str) -> Iterator[ListingData]:
-        ...
+    def parse_search(self, html: str, url: str) -> Iterator[ListingData]: ...
 
     @abstractmethod
-    def parse_detail(self, html: str, url: str) -> ListingData:
-        ...
+    def parse_detail(self, html: str, url: str) -> ListingData: ...
 
 
 def merge(base: ListingData, detail: ListingData) -> ListingData:
